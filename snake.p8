@@ -11,14 +11,14 @@ food_spawned=false
 food_xpos=nil
 
 function food()
-		if not food_spawned then
-				food_xpos=rnd(screen_width-size)
-				food_spawned=true
-		end
-		rectfill(food_xpos,
-											food_xpos,
-											food_xpos+size,
-											food_xpos+size,1)
+  if not food_spawned then
+    food_xpos=rnd(screen_width-size)
+    food_spawned=true
+  end
+  rectfill(food_xpos,
+           food_xpos,
+           food_xpos+size,
+           food_xpos+size,1)
 end
 
 function _update()
@@ -44,8 +44,8 @@ function _draw()
   rectfill(0,0,127,127,5)
   //draw snake
   rectfill(x,y,x+size,y+size,3)
-		//draw food
-		food()
+  //draw food
+  food()
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
