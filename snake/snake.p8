@@ -21,12 +21,31 @@ function food()
            food_xpos+size,1)
 end
 
+function eat_food()
+  print(x)
+  print(y)
+  print(food_xpos)
+  print(food_xpos+size)
+  // todo: this only handles
+  // top left pixel of player
+  if x>food_xpos      and
+     x<food_xpos+size and
+     y>food_xpos      and
+     y<food_xpos+size then
+     print "collide!"
+  			dx=0 dy=0
+  end
+end
+
 function _update()
   //get player inputs and set player dx dy
   if (btn(0)) and dx!=speed  then dx=-speed dy=0 end
   if (btn(1)) and dx!=-speed then dx=speed  dy=0 end
   if (btn(2)) and dy!=speed  then dy=-speed dx=0 end
   if (btn(3)) and dy!=-speed then dy=speed  dx=0 end
+  
+  // pause game on z for debug
+  if (btn(4)) then dx=0 dy=0 end
   
   //wrap screen boundaries
   if x>screen_width then x=0 end
@@ -46,6 +65,8 @@ function _draw()
   rectfill(x,y,x+size,y+size,3)
   //draw food
   food()
+
+		eat_food()
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
