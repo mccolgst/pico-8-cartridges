@@ -8,7 +8,7 @@ screen_height=127
 x=52 y=52
 dx=0 dy=0
 food_spawned=false
-foox_xpos=nil
+food_xpos=nil
 
 function food()
 		if not food_spawned then
