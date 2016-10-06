@@ -3,17 +3,18 @@ version 8
 __lua__
 function _init()
   size=6
+  can_place=false
   board = blank_board()
   minos = {}
   minos.l = { 
-  		{0,9,0},
-  		{0,9,0},
-  		{0,9,9}
+  		{9,0},
+  		{9,0},
+  		{9,9}
   }
   minos.j = { 
-  		{0,1,0},
-  		{0,1,0},
-  		{1,1,0}
+  		{0,1},
+  		{0,1},
+  		{1,1}
   }
   minos.i = {
   		{12,12,12,12} 
@@ -25,17 +26,14 @@ function _init()
   minos.s = {
     {0,11,11},
     {11,11,0},
-    {0,0,0},
   }
   minos.t = {
     {0,2,0},
-    {2,2,2},
-    {0,0,0},  
+    {2,2,2},  
   }
   minos.z = {
     {8,8,0},
-    {0,8,8},
-    {0,0,0},  
+    {0,8,8},  
   }
   rand_pieces = {minos.l,
                  minos.j,
@@ -44,73 +42,72 @@ function _init()
                  minos.s,
                  minos.t,
                  minos.z}
-  status = {
-  	 {0,5,5,5,5,5,1},
-  	 {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,16,17,18,19,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-    {6,7,7,7,7,7,6},
-  	 {2,5,5,5,5,5,3},
-  }
+
   piece = rand_pieces[flr(rnd(7)+1)]
-  piece_pos = {x=20,y=0}
+  p_board_pos={x=4,y=0}
+  piece_pos={}
   frame=0
 end
 
-function draw_obj(board,pos,is_sprite)
-  modx=0
-  mody=0
+function draw_obj(board,pos,is_piece)
+  local modx=0
+  local mody=0
   for row in all(board) do
   	 modx=0
   	 for col in all(row) do
-  	 		clr = col
+  	 		local clr = col
   	 		if col == 0 then
   	 		  clr = 5
   	 		end
-  	 		if is_sprite then
-  	 		  spr(col,
-  	 		      pos.x+modx,
-  	 		      pos.y+mody)
-  	 		  modx+=8
-  	 		else
-  	 		  rectfill(pos.x+modx,
-  	 		           pos.y+mody,
-  	 		           pos.x+modx+size-1,
-  	 		           pos.y+mody+size-1,
-  	 		           clr)
+  	 		rectfill(pos.x+modx,
+  	 		         pos.y+mody,
+  	 		         pos.x+modx+size-2,
+  	 		         pos.y+mody+size-2,
+  	 		         clr)
   	 		modx+=size
-  	 		end
   	 end
   	 mody+=size
   end
 end
 
 function _update()
-   pressing = false
    frame+=1
    if frame%30 == 0 then
      frame = 0
-     piece_pos.y+=size
+     p_board_pos.y+=1
    end
-   if btn(1) and pressing==false then
-   	 piece_pos.x+=size
-   	 pressing=true
+   if frame%2 == 0 then
+     if btn(1) and p_board_pos.x+#piece[1]+1<=#board[1] then
+       p_board_pos.x+=1
+     elseif btn(0) and p_board_pos.x>0 then
+       p_board_pos.x-=1
+     elseif btn(3) then
+       p_board_pos.y+=1
+     elseif btn(2) then -- cheater
+       p_board_pos.y-=1
+       -- todo rotate right
+     end
+   end
+   piece_pos.x=p_board_pos.x*size
+   piece_pos.y=p_board_pos.y*size
+   can_place=can_place_mino(piece,
+                            board,
+                            p_board_pos)
+   if can_place==true then
+     write_piece_to_board(piece,board,p_board_pos)
+     p_board_pos={x=4,y=0}
+     piece = rand_pieces[flr(rnd(7)+1)]
    end
 end
 
 function _draw()
   cls()
 	 draw_obj(board,{x=0,y=0})
-	 draw_obj(status,{x=60,y=-3},true)
 	 draw_obj(piece,piece_pos)
+	 print(p_board_pos.x..","..p_board_pos.y,70,20,12)
+  print(can_place,70,40,12)
+  print(#piece+1+p_board_pos.y..","..#board,70,50,12)
+  print(#piece[1]+p_board_pos.x,70,70,12)
 end
 
 function blank_board()
@@ -122,6 +119,50 @@ function blank_board()
   		end 
   end
   return board
+end
+
+function can_place_mino(piece,board,p_board_pos)
+  local modx=1
+  local mody=1
+  local mino=piece
+  local pos=p_board_pos
+  
+  for row in all(mino) do
+    modx=1
+    if pos.y+#mino >= #board then
+      return true
+    end
+    for col in all(row) do
+      if col!=0 then
+        if board[pos.y+mody+1][pos.x+modx] !=0 then
+          return true
+        end
+      end
+      modx+=1
+    end
+    mody+=1
+  end
+  return false
+end
+
+function can_go(piece,new_pos)
+  -- use for if a mino can go into new_pos
+  -- for determining if an input is valid
+end
+
+function write_piece_to_board(piece,board,pos)
+  local modx=1
+  local mody=1
+  for row in all(piece) do
+    modx=1
+    for col in all(row) do
+      if col!=0 then
+        board[pos.y+mody][pos.x+modx] = col
+      end
+      modx+=1
+    end
+    mody+=1
+  end
 end
 __gfx__
 00000000000000000001100000011000000000000000000000011000000000000000000000000000000000000000000000000000000000000000000000000000
