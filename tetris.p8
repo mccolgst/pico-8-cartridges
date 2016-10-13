@@ -42,76 +42,53 @@ function _init()
                  minos.s,
                  minos.t,
                  minos.z}
-
-  piece = rand_pieces[flr(rnd(7)+1)]
-  p_board_pos={x=4,y=0}
-  piece_pos={}
-  frame=0
-end
-
-function draw_obj(board,pos,is_piece)
-  local modx=0
-  local mody=0
-  for row in all(board) do
-  	 modx=0
-  	 for col in all(row) do
-  	 		local clr = col
-  	 		if col == 0 then
-  	 		  clr = 5
-  	 		end
-  	 		rectfill(pos.x+modx,
-  	 		         pos.y+mody,
-  	 		         pos.x+modx+size-2,
-  	 		         pos.y+mody+size-2,
-  	 		         clr)
-  	 		modx+=size
-  	 end
-  	 mody+=size
-  end
+  mino = new_mino()
+  t=0
 end
 
 function _update()
-   frame+=1
-   if frame%30 == 0 then
-     frame = 0
-     p_board_pos.y+=1
+   t+=1
+   if t%30 == 0 then
+     t=0
+     mino.y+=1
    end
-   if frame%2 == 0 then
-     if btn(1) and p_board_pos.x+#piece[1]+1<=#board[1] then
-       p_board_pos.x+=1
-     elseif btn(0) and p_board_pos.x>0 then
-       p_board_pos.x-=1
+   if t%2 == 0 then
+     if btn(1) and mino.x+#mino.piece[1]+1<=#board[1] then
+       mino.x+=1
+     elseif btn(0) and mino.x>0 then
+       mino.x-=1
      elseif btn(3) then
-       p_board_pos.y+=1
+       mino.y+=1
      elseif btn(2) then -- cheater
-       p_board_pos.y-=1
+       mino.y-=1
        -- todo rotate right
      end
    end
-   piece_pos.x=p_board_pos.x*size
-   piece_pos.y=p_board_pos.y*size
-   can_place=can_place_mino(piece,
-                            board,
-                            p_board_pos)
+   can_place=can_place_mino(mino,board)
    if can_place==true then
-     write_piece_to_board(piece,board,p_board_pos)
-     p_board_pos={x=4,y=0}
-     piece = rand_pieces[flr(rnd(7)+1)]
+     write_to_board(mino,board)
+     mino=new_mino()
    end
 end
 
 function _draw()
   cls()
-	 draw_obj(board,{x=0,y=0})
-	 draw_obj(piece,piece_pos)
-	 print(p_board_pos.x..","..p_board_pos.y,70,20,12)
+	 draw_board(board)
+	 draw_obj(mino)
   print(can_place,70,40,12)
-  print(#piece+1+p_board_pos.y..","..#board,70,50,12)
-  print(#piece[1]+p_board_pos.x,70,70,12)
+  print(mino.x..","..mino.y,70,80,12)
+end
+
+function new_mino()
+  local mino = {}
+  mino.x=4
+  mino.y=0
+  mino.piece=rand_pieces[flr(rnd(7)+1)]
+  return mino
 end
 
 function blank_board()
-  board = {}
+  local board = {}
   for row=1,21 do
     board[row] = {}
   		for col=1,10 do
@@ -121,47 +98,78 @@ function blank_board()
   return board
 end
 
-function can_place_mino(piece,board,p_board_pos)
-  local modx=1
-  local mody=1
-  local mino=piece
-  local pos=p_board_pos
+function draw_board(board)
+  local mod={x=0,y=0}
+  for row in all(board) do
+    mod.x=0
+    for col in all(row) do
+      local clr=col
+      if col==0 then
+        clr=5
+      end
+      rectfill(mod.x,
+               mod.y,
+               mod.x+size-2,
+               mod.y+size-2,
+               clr)
+      mod.x+=size
+    end
+    mod.y+=size
+  end
+end
+
+function draw_obj(mino)
+  local mod = {x=0,y=0}
+  for row in all(mino.piece) do
+  	 mod.x=0
+  	 for col in all(row) do
+      local clr=col
+      if col==0 then
+        clr=5
+      end
+  	 		rectfill((mino.x*size)+mod.x,
+  	 	          (mino.y*size)+mod.y,
+  	            (mino.x*size)+mod.x+size-2,
+  		           (mino.y*size)+mod.y+size-2,
+  		           clr)
+  	 		mod.x+=size
+  	 end
+  	 mod.y+=size
+  end
+end
+
+function can_place_mino(p,board)
+  local mod={x=1,y=1}
   
-  for row in all(mino) do
-    modx=1
-    if pos.y+#mino >= #board then
+  for row in all(p.piece) do
+    mod.x=1
+    if p.y+#p.piece >= #board then
       return true
     end
     for col in all(row) do
       if col!=0 then
-        if board[pos.y+mody+1][pos.x+modx] !=0 then
+        if board[p.y+mod.y+1][p.x+mod.x] !=0 then
           return true
         end
       end
-      modx+=1
+      mod.x+=1
     end
-    mody+=1
+    mod.y+=1
   end
   return false
 end
 
-function can_go(piece,new_pos)
-  -- use for if a mino can go into new_pos
-  -- for determining if an input is valid
-end
-
-function write_piece_to_board(piece,board,pos)
-  local modx=1
-  local mody=1
-  for row in all(piece) do
-    modx=1
+function write_to_board(mino,board)
+  local mod={x=1,y=1}
+  for row in all(mino.piece) do
+    mod.x=1
     for col in all(row) do
       if col!=0 then
-        board[pos.y+mody][pos.x+modx] = col
+        board[mino.y+mod.y][mino.x+mod.x] = col
       end
-      modx+=1
+      mod.x+=1
     end
-    mody+=1
+    mod.y+=1
   end
 end
 __gfx__
