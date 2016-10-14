@@ -73,8 +73,9 @@ end
 
 function _draw()
   cls()
-	 draw_board(board)
-	 draw_obj(mino)
+	 //draw_board(board)
+	 draw_obj(board,false)
+	 draw_obj(mino,true)
   print(can_place,70,40,12)
   print(mino.x..","..mino.y,70,80,12)
 end
@@ -98,39 +99,27 @@ function blank_board()
   return board
 end
 
-function draw_board(board)
-  local mod={x=0,y=0}
-  for row in all(board) do
-    mod.x=0
-    for col in all(row) do
-      local clr=col
-      if col==0 then
-        clr=5
-      end
-      rectfill(mod.x,
-               mod.y,
-               mod.x+size-2,
-               mod.y+size-2,
-               clr)
-      mod.x+=size
-    end
-    mod.y+=size
-  end
-end
-
-function draw_obj(mino)
+function draw_obj(obj,is_mino)
   local mod = {x=0,y=0}
-  for row in all(mino.piece) do
+  local x,y = 0,0
+  local drawable = obj
+  if is_mino then
+    x,y=obj.x*size,obj.y*size
+    drawable=obj.piece
+  else
+    drawable=obj
+  end
+  for row in all(drawable) do
   	 mod.x=0
   	 for col in all(row) do
       local clr=col
       if col==0 then
         clr=5
       end
-  	 		rectfill((mino.x*size)+mod.x,
-  	 	          (mino.y*size)+mod.y,
-  	            (mino.x*size)+mod.x+size-2,
-  		           (mino.y*size)+mod.y+size-2,
+  	 		rectfill(x+mod.x,
+  	 	          y+mod.y,
+  	            x+mod.x+size-2,
+  		           y+mod.y+size-2,
   		           clr)
   	 		mod.x+=size
   	 end
