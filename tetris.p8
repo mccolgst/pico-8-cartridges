@@ -6,18 +6,18 @@ function _init()
   can_place=false
   board = blank_board()
   minos = {}
-  minos.l = { 
-  		{9,0},
-  		{9,0},
-  		{9,9}
+  minos.l = {
+      {9,0},
+      {9,0},
+      {9,9}
   }
-  minos.j = { 
-  		{0,1},
-  		{0,1},
-  		{1,1}
+  minos.j = {
+      {0,1},
+      {0,1},
+      {1,1}
   }
   minos.i = {
-  		{12,12,12,12} 
+      {12,12,12,12}
   }
   minos.o = {
     {10,10},
@@ -29,11 +29,11 @@ function _init()
   }
   minos.t = {
     {0,2,0},
-    {2,2,2},  
+    {2,2,2},
   }
   minos.z = {
     {8,8,0},
-    {0,8,8},  
+    {0,8,8},
   }
   rand_pieces = {minos.l,
                  minos.j,
@@ -73,9 +73,9 @@ end
 
 function _draw()
   cls()
-	 //draw_board(board)
-	 draw_obj(board,false)
-	 draw_obj(mino,true)
+   //draw_board(board)
+   draw_obj(board,false)
+   draw_obj(mino,true)
   print(can_place,70,40,12)
   print(mino.x..","..mino.y,70,80,12)
 end
@@ -92,9 +92,9 @@ function blank_board()
   local board = {}
   for row=1,21 do
     board[row] = {}
-  		for col=1,10 do
-  		  board[row][col]=0
-  		end 
+      for col=1,10 do
+        board[row][col]=0
+      end
   end
   return board
 end
@@ -110,26 +110,26 @@ function draw_obj(obj,is_mino)
     drawable=obj
   end
   for row in all(drawable) do
-  	 mod.x=0
-  	 for col in all(row) do
+     mod.x=0
+     for col in all(row) do
       local clr=col
       if col==0 then
         clr=5
       end
-  	 		rectfill(x+mod.x,
-  	 	          y+mod.y,
-  	            x+mod.x+size-2,
-  		           y+mod.y+size-2,
-  		           clr)
-  	 		mod.x+=size
-  	 end
-  	 mod.y+=size
+         rectfill(x+mod.x,
+                 y+mod.y,
+                x+mod.x+size-2,
+                 y+mod.y+size-2,
+                 clr)
+         mod.x+=size
+     end
+     mod.y+=size
   end
 end
 
 function can_place_mino(p,board)
   local mod={x=1,y=1}
-  
+
   for row in all(p.piece) do
     mod.x=1
     if p.y+#p.piece >= #board then
