@@ -47,35 +47,35 @@ function _init()
 end
 
 function _update()
-   t+=1
-   if t%30 == 0 then
-     t=0
-     mino.y+=1
-   end
-   if t%2 == 0 then
-     if btn(1) and mino.x+#mino.piece[1]+1<=#board[1] then
-       mino.x+=1
-     elseif btn(0) and mino.x>0 then
-       mino.x-=1
-     elseif btn(3) then
-       mino.y+=1
-     elseif btn(2) then -- cheater
-       mino.y-=1
-       -- todo rotate right
-     end
-   end
-   can_place=can_place_mino(mino,board)
-   if can_place==true then
-     write_to_board(mino,board)
-     mino=new_mino()
-   end
+  can_place=can_place_mino(mino,board)
+  if can_place==true then
+    write_to_board(mino,board)
+    mino=new_mino()
+  end
+  t+=1
+  if t%2 == 0 then
+    if btn(1) and mino.x+#mino.piece[1]+1<=#board[1] then
+      mino.x+=1
+    elseif btn(0) and mino.x>0 then
+      mino.x-=1
+    elseif btn(3) then
+      mino.y+=1
+    elseif btn(2) then -- cheater
+      mino.y-=1
+      -- todo rotate right
+    end
+  end
+  if t%30 == 0 then
+    t=0
+    mino.y+=1
+  end
 end
 
 function _draw()
   cls()
    //draw_board(board)
-   draw_obj(board,false)
-   draw_obj(mino,true)
+  draw_obj(board,false)
+  draw_obj(mino,true)
   print(can_place,70,40,12)
   print(mino.x..","..mino.y,70,80,12)
 end
@@ -110,20 +110,20 @@ function draw_obj(obj,is_mino)
     drawable=obj
   end
   for row in all(drawable) do
-     mod.x=0
-     for col in all(row) do
+    mod.x=0
+    for col in all(row) do
       local clr=col
       if col==0 then
         clr=5
       end
-         rectfill(x+mod.x,
-                 y+mod.y,
-                x+mod.x+size-2,
-                 y+mod.y+size-2,
-                 clr)
-         mod.x+=size
-     end
-     mod.y+=size
+      rectfill(x+mod.x,
+               y+mod.y,
+               x+mod.x+size-2,
+               y+mod.y+size-2,
+               clr)
+      mod.x+=size
+    end
+    mod.y+=size
   end
 end
 
