@@ -7,43 +7,115 @@ function _init()
   board = blank_board()
   minos = {}
   minos.l = {
+    {
       {9,0},
       {9,0},
-      {9,9}
+      {9,9},
+    },
+    {
+      {9,9,9},
+      {9,0,0},
+    },
+    {
+      {9,9},
+      {0,9},
+      {0,9},
+    },
+    {
+      {0,0,9},
+      {9,9,9},
+    },
   }
   minos.j = {
+    {
       {0,1},
       {0,1},
-      {1,1}
+      {1,1},
+    },
+    {
+      {1,0,0},
+      {1,1,1},
+    },
+    {
+      {1,1},
+      {1,0},
+      {1,0},
+    },
+    {
+      {1,1,1},
+      {0,0,1},
+    },
   }
   minos.i = {
-      {12,12,12,12}
+    {
+      {12,12,12,12},
+    },
+    {
+      {12},
+      {12},
+      {12},
+      {12},
+    },
   }
   minos.o = {
-    {10,10},
-    {10,10}
+    {
+      {10,10},
+      {10,10},
+    },
   }
   minos.s = {
-    {0,11,11},
-    {11,11,0},
+    {
+      {0,11,11},
+      {11,11,0},
+    },
+    {
+      {11,0},
+      {11,11},
+      {0,11},
+    },
   }
   minos.t = {
-    {0,2,0},
-    {2,2,2},
+    {
+      {0,2,0},
+      {2,2,2},
+    },
+    {
+      {2,0},
+      {2,2},
+      {2,0},
+    },
+    {
+      {2,2,2},
+      {0,2,0},
+    },
+    {
+      {0,2},
+      {2,2},
+      {0,2},
+    },
   }
   minos.z = {
-    {8,8,0},
-    {0,8,8},
+    {
+      {8,8,0},
+      {0,8,8},
+    },
+    {
+      {0,8},
+      {8,8},
+      {8,0},
+    },
   }
-  rand_pieces = {minos.l,
-                 minos.j,
-                 minos.i,
-                 minos.o,
-                 minos.s,
-                 minos.t,
-                 minos.z}
+  rand_types={"l","z","t","s","o","i","j"}
+  rand_pieces = {minos.l[1],
+                 minos.j[1],
+                 minos.i[1],
+                 minos.o[1],
+                 minos.s[1],
+                 minos.t[1],
+                 minos.z[1]}
   mino = new_mino()
   t=0
+  rot=1
 end
 
 function _update()
@@ -53,7 +125,7 @@ function _update()
     mino=new_mino()
   end
   t+=1
-  if t%2 == 0 then
+  if t%2==0 then
     if btn(1) and mino.x+#mino.piece[1]+1<=#board[1] then
       mino.x+=1
     elseif btn(0) and mino.x>0 then
@@ -62,7 +134,8 @@ function _update()
       mino.y+=1
     elseif btn(2) then -- cheater
       mino.y-=1
-      -- todo rotate right
+    elseif btn(5) then -- rotate right
+      mino.piece=rot_mino(mino.t)
     end
   end
   if t%30 == 0 then
@@ -76,6 +149,7 @@ function _draw()
    //draw_board(board)
   draw_obj(board,false)
   draw_obj(mino,true)
+  //print(#mino.piece..","..#mino.piece[1],70,50,12)
   print(can_place,70,40,12)
   print(mino.x..","..mino.y,70,80,12)
 end
@@ -84,7 +158,9 @@ function new_mino()
   local mino = {}
   mino.x=4
   mino.y=0
-  mino.piece=rand_pieces[flr(rnd(7)+1)]
+  local t=rand_types[flr(rnd(7)+1)]
+  mino.t=t
+  mino.piece=minos[t][1]
   return mino
 end
 
@@ -160,6 +236,14 @@ function write_to_board(mino,board)
     end
     mod.y+=1
   end
+end
+
+function rot_mino(mino_type)
+  rot+=1
+  if rot>#minos[mino_type] then
+    rot=1
+  end
+  return minos[mino_type][rot]
 end
 __gfx__
 00000000000000000001100000011000000000000000000000011000000000000000000000000000000000000000000000000000000000000000000000000000
