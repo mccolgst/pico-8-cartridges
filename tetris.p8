@@ -116,9 +116,17 @@ function _init()
   mino = new_mino()
   t=0
   rot=1
+  turning=false
 end
 
 function _update()
+  if mino.x+#mino.piece[1]>#board[1] then
+    local diff=#board[1]-(mino.x+#mino.piece[1])
+    mino.x+=diff
+  end
+  if mino.x<0 then
+    mino.x=0
+  end
   can_place=can_place_mino(mino,board)
   if can_place==true then
     write_to_board(mino,board)
@@ -134,8 +142,14 @@ function _update()
       mino.y+=1
     elseif btn(2) then -- cheater
       mino.y-=1
-    elseif btn(5) then -- rotate right
-      mino.piece=rot_mino(mino.t)
+    elseif btn(5) and turning==false then -- rotate right
+      turning=true
+      mino.piece=rot_mino(mino.t,1)
+    elseif btn(4) and turning==false then
+      turning=true
+      mino.piece=rot_mino(mino.t,-1)
+    else
+      turning=false
     end
   end
   if t%30 == 0 then
@@ -146,12 +160,13 @@ end
 
 function _draw()
   cls()
-   //draw_board(board)
+  //draw_board(board)
   draw_obj(board,false)
   draw_obj(mino,true)
   //print(#mino.piece..","..#mino.piece[1],70,50,12)
   print(can_place,70,40,12)
   print(mino.x..","..mino.y,70,80,12)
+  print("lenx "..#mino.piece[1],70,90,12)
 end
 
 function new_mino()
@@ -238,9 +253,11 @@ function write_to_board(mino,board)
   end
 end
 
-function rot_mino(mino_type)
-  rot+=1
-  if rot>#minos[mino_type] then
+function rot_mino(mino_type,direc)
+  rot+=direc
+  if direc==-1 and rot<1 then
+    rot=#minos[mino_type]
+  elseif direc==1 and rot>#minos[mino_type] then
     rot=1
   end
   return minos[mino_type][rot]
