@@ -120,6 +120,7 @@ function _init()
 end
 
 function _update()
+  board=clear_lines(board)
   if mino.x+#mino.piece[1]>#board[1] then
     local diff=#board[1]-(mino.x+#mino.piece[1])
     mino.x+=diff
@@ -261,6 +262,41 @@ function rot_mino(mino_type,direc)
     rot=1
   end
   return minos[mino_type][rot]
+end
+
+function clear_lines(board)
+  local full_lines=0
+  local cleared_board={}
+
+  for i=1,#board do
+    line_full=true
+    new_row={}
+    for j=1,#board[1] do
+      new_row[j]=board[i][j]
+      if board[i][j]==0 then
+        line_full=false
+      end
+    end
+    if line_full then
+      full_lines+=1
+    else
+      add(cleared_board,new_row)
+    end
+  end
+  // create board of blank rows
+  // for each full line counted
+  // then add the rest of the 
+  // old board to it
+  // row by row
+  new_board={}
+  for i=1,full_lines do
+    add(new_board,{0,0,0,0,0,
+                   0,0,0,0,0})
+  end
+  for row in all(cleared_board) do
+    add(new_board,row)
+  end
+  return new_board
 end
 __gfx__
 00000000000000000001100000011000000000000000000000011000000000000000000000000000000000000000000000000000000000000000000000000000
