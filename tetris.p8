@@ -7,6 +7,7 @@ function _init()
   speed=1
   can_place=false
   board = blank_board()
+  printables={}
   minos = {}
   minos.l = {
     {
@@ -119,6 +120,28 @@ function _init()
   t=0
   rot=1
   turning=false
+  add(printables,{s="start",x=25,y=45,t=-20})
+  add(printables,{s="start",x=25,y=55,t=-10})
+  add(printables,{s="start",x=25,y=65,t=0})
+  add(printables,{s="start",x=25,y=75,t=10})
+  add(printables,{s="start",x=25,y=85,t=20})
+  add(printables,{s="start",x=25,y=95,t=30})
+
+  add(printables,{s="start",x=0,y=45,t=-20})
+  add(printables,{s="start",x=0,y=55,t=-10})
+  add(printables,{s="start",x=0,y=65,t=0})
+  add(printables,{s="start",x=0,y=75,t=10})
+  add(printables,{s="start",x=0,y=85,t=20})
+  add(printables,{s="start",x=0,y=95,t=30})
+
+  add(printables,{s="start",x=50,y=45,t=-20})
+  add(printables,{s="start",x=50,y=55,t=-10})
+  add(printables,{s="start",x=50,y=65,t=0})
+  add(printables,{s="start",x=50,y=75,t=10})
+  add(printables,{s="start",x=50,y=85,t=20})
+  add(printables,{s="start",x=50,y=95,t=30})
+
+
 end
 
 function _update()
@@ -126,7 +149,13 @@ function _update()
     t=0
     mino.y+=1
   end
-
+  
+  for p in all(printables) do
+    if p.t>20 then
+      del(printables,p)
+    end
+  end
+  
   //mino cant go out of bounds
   if mino.x+#mino.piece[1]>#board[1] then
     local diff=#board[1]-(mino.x+#mino.piece[1])
@@ -176,6 +205,11 @@ function _draw()
   draw_obj(mino,true)
   print("lines: "..lines_cleared,70,30,12)
   print("level: "..speed,70,40,12)
+  //p_col("test",70,50)
+
+  for p in all(printables) do
+    p_col(p)
+  end
 end
 
 function new_mino()
@@ -305,7 +339,21 @@ function clear_lines(board)
     add(new_board,row)
   end
   lines_cleared+=full_lines
+  if full_lines>=1 then
+    add(printables,{s="+"..full_lines,
+                    x=100,
+                    y=30,
+                    t=0})
+  end
   return new_board
+end
+
+function p_col(pr)
+  if t%5 then
+    pr.y-=1
+  end
+  print(pr.s,pr.x,pr.y,flr(t%12))
+  pr.t+=1
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
