@@ -1,82 +1,174 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
-monsters = {}
-
-player = {}
-player.s = 1
-player.x = 60
-player.y = 60
-player.dx = 0
-player.dy = 0
-player.frames = 3
-player.frame = 0
-speed=.7
+actor = {}
+speed=.1
 t=0
 
 function _init()
-  make_monster(20,20,.3,.3)
-  make_monster(50,90,0,-.4)
+  pl = make_actor(4,4)
+  pl.s = 1
 end
 
 function _update()
   t+=1
-  player.dx=0
-  player.dy=0
-
-  if btn(0) then
-    player.s=4
-    player.dx=-speed
-  end
-  if btn(1) then
-    player.s=1
-    player.dx=speed
-  end
-  if btn(2) then
-    player.s=17
-    player.dy=-speed
-  end
-  if btn(3) then
-    player.s=20
-    player.dy=speed
-  end
-  
-  player.x+=player.dx
-  player.y+=player.dy
-  
-  player.frame -= abs(player.dx) * 4
-  player.frame -= abs(player.dy) * 4
-  player.frame %= player.frames
-  for monster in all(monsters) do
-    monster.x += monster.dx
-    monster.y += monster.dy
-    monster.frame += abs(monster.dx) * 4
-    monster.frame += abs(monster.dy) * 4
-    monster.frame %= monster.frames
-  end
+  move_player(pl)
+  foreach(actor, move_actor)
 end
 
 
 function _draw()
-  
   cls()
   map(0,0,0,0,16,16)
-  spr(player.s+player.frame, player.x, player.y)
-  for monster in all(monsters) do
-    spr(monster.s+monster.frame, monster.x, monster.y)
+  foreach(actor,draw_actor)
+  print("x "..pl.x,0,120,7)
+  print("y "..pl.y,64,120,7)
+end
+
+function move_player(pl)
+  pl.dx=0
+  pl.dy=0
+
+  if btn(0) then
+    pl.s=4
+    pl.dx=-speed
+  end
+  if btn(1) then
+    pl.s=1
+    pl.dx=speed
+  end
+  if btn(2) then
+    pl.s=17
+    pl.dy=-speed
+  end
+  if btn(3) then
+    pl.s=20
+    pl.dy=speed
   end
 end
 
-function make_monster(x, y, dx, dy)
-  monster = {}
-  monster.x = x
-  monster.y = y
-  monster.dx = dx
-  monster.dy = dy
-  monster.s = 7
-  monster.frame = 0
-  monster.frames = 2
-  add(monsters,monster)
+function make_actor(x, y)
+ a={}
+ a.x = x
+ a.y = y
+ a.dx = 0
+ a.dy = 0
+ a.s = 1
+ a.frame = 0
+ a.frames=3
+ 
+ -- half-width and half-height
+ -- slightly less than 0.5 so
+ -- that will fit through 1-wide
+ -- holes.
+ a.w = 0.4
+ a.h = 0.4
+ 
+ add(actor,a)
+ 
+ return a
+end
+
+function draw_actor(a)
+ local sx = (a.x * 8) - 4
+ local sy = (a.y * 8) - 4
+ spr(a.s + a.frame, sx, sy)
+end
+
+function solid(x, y)
+
+ -- grab the cell value
+ val=mget(x, y)
+ 
+ -- check if flag 1 is set (the
+ -- orange toggle button in the 
+ -- sprite editor)
+ return fget(val, 1)
+ 
+end
+
+function solid_area(x,y,w,h)
+
+ return 
+  solid(x-w,y-h) or
+  solid(x+w,y-h) or
+  solid(x-w,y+h) or
+  solid(x+w,y+h)
+end
+
+-- true if a will hit another
+-- actor after moving dx,dy
+function solid_actor(a, dx, dy)
+ for a2 in all(actor) do
+  if a2 != a then
+   local x=(a.x+dx) - a2.x
+   local y=(a.y+dy) - a2.y
+   if ((abs(x) < (a.w+a2.w)) and
+      (abs(y) < (a.h+a2.h)))
+   then 
+    
+    -- moving together?
+    -- this allows actors to
+    -- overlap initially 
+    -- without sticking together    
+    if (dx != 0 and abs(x) <
+        abs(a.x-a2.x)) then
+     v=a.dx + a2.dy
+     a.dx = v/2
+     a2.dx = v/2
+     return true 
+    end
+    
+    if (dy != 0 and abs(y) <
+        abs(a.y-a2.y)) then
+     v=a.dy + a2.dy
+     a.dy=v/2
+     a2.dy=v/2
+     return true 
+    end
+    
+    --return true
+    
+   end
+  end
+ end
+ return false
+end
+
+function solid_a(a, dx, dy)
+ if solid_area(a.x+dx,a.y+dy,
+    a.w,a.h) then
+    return true end
+ return solid_actor(a, dx, dy) 
+end
+
+function move_actor(a)
+
+ -- only move actor along x
+ -- if the resulting position
+ -- will not overlap with a wall
+
+ if not solid_a(a, a.dx, 0) then
+    a.x += a.dx
+
+ end
+
+ -- ditto for y
+
+ if not solid_a(a, 0, a.dy) then
+   a.y += a.dy
+ end
+ 
+
+ 
+ -- advance one frame every
+ -- time actor moves 1/4 of
+ -- a tile
+ 
+ a.frame += abs(a.dx) * 4
+ a.frame += abs(a.dy) * 4
+ a.frame %= a.frames
+
 end
 __gfx__
 000000000000000000000000000000000000000000000000000000005555515555555515d55555555555555d55555555555355555553b5550000000000000000
@@ -208,7 +300,7 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __gff__
-0000000000000000000000000101000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000303000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 __map__
 0c0c0d0c0c0d0d0d0c0d0d0c0d0d0d0d00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
