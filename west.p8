@@ -4,6 +4,7 @@ __lua__
 actor = {}
 speed=.1
 t=0
+b_speed=.3
 
 function _init()
   pl = make_actor(4,4)
@@ -13,7 +14,7 @@ end
 function _update()
   t+=1
   move_player(pl)
-  foreach(actor, move_actor)
+  foreach(actor,move_actor)
 end
 
 
@@ -45,14 +46,56 @@ function move_player(pl)
     pl.s=20
     pl.dy=speed
   end
+  
+  if btnp(5) then
+    shoot_bullet()
+  end
+end
+
+function shoot_bullet()
+  local x = pl.x
+  local y = pl.y
+  dx = 0
+  dy = 0
+  // get player spr to determine
+  // which direction bullet goes
+  if pl.s == 4 then
+    dx = -b_speed
+  elseif pl.s == 1 then
+    dx = b_speed
+  elseif pl.s == 17 then
+    dy = -b_speed
+  else
+    dy = b_speed
+  end
+  
+  if abs(pl.dx)!=0 and abs(pl.dy)!=0 then
+    if pl.dx>0 then
+      dx = b_speed
+    else
+      dx = -b_speed
+    end
+    if pl.dy>0 then
+      dy = b_speed
+    else
+      dy = -b_speed
+    end
+  end
+  
+  bullet = make_actor(x,y)
+  bullet.dx=dx
+  bullet.dy=dy
+  bullet.s=33
+  bullet.frames=2
+  bullet.type="bullet"
 end
 
 function make_actor(x, y)
  a={}
  a.x = x
  a.y = y
- a.dx = 0
- a.dy = 0
+ a.dx = dx
+ a.dy = dy
  a.s = 1
  a.frame = 0
  a.frames=3
@@ -111,22 +154,7 @@ function solid_actor(a, dx, dy)
     -- this allows actors to
     -- overlap initially 
     -- without sticking together    
-    if (dx != 0 and abs(x) <
-        abs(a.x-a2.x)) then
-     v=a.dx + a2.dy
-     a.dx = v/2
-     a2.dx = v/2
-     return true 
-    end
-    
-    if (dy != 0 and abs(y) <
-        abs(a.y-a2.y)) then
-     v=a.dy + a2.dy
-     a.dy=v/2
-     a2.dy=v/2
-     return true 
-    end
-    
+     
     --return true
     
    end
@@ -148,15 +176,23 @@ function move_actor(a)
  -- if the resulting position
  -- will not overlap with a wall
 
+ 
  if not solid_a(a, a.dx, 0) then
     a.x += a.dx
-
+ else
+   if a.type == "bullet" then
+     del(actor, a)
+   end
  end
 
  -- ditto for y
 
  if not solid_a(a, 0, a.dy) then
    a.y += a.dy
+ else
+   if a.type == "bullet" then
+     del(actor, a)
+   end
  end
  
 
@@ -190,8 +226,8 @@ __gfx__
 00000000000000000000000000000000000000000000000000000500000000005000000000000005000000003333333300000000000000000000000000000000
 00000000000000000000000000000000000000000005500000055500000550000505500000055050000000003333333300000000000000000000000000000000
 00000000000000000000000000000000000000000055550000555500005555000055550000555500000000003333333300000000000000000000000000000000
-0000000000000000000000000000000000000000000ff000000ff500000ff00000f5f000000f5f00000000003333333300000000000000000000000000000000
-0000000000000000000000000000000000000000555580000088880000f588000088880000888800000000003333333300000000000000000000000000000000
+00000000000aa000000770000000000000000000000ff000000ff500000ff00000f5f000000f5f00000000003333333300000000000000000000000000000000
+00000000000aa000000770000000000000000000555580000088880000f588000088880000888800000000003333333300000000000000000000000000000000
 000000000000000000000000000000000000000000f88000000880000005f0000008800000088000000000003333333300000000000000000000000000000000
 0000000000000000000000000000000000000000000cc000000cc0000005c000000cc000000cc000000000003333333300000000000000000000000000000000
 0000000000000000000000000000000000000000000cc000000cc0000005c000000cc000000cc000000000003333333300000000000000000000000000000000
