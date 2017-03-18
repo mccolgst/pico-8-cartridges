@@ -119,29 +119,8 @@ function _init()
   mino = new_mino()
   t=0
   rot=1
-  turning=false
   add(printables,{s="start",x=25,y=45,t=-20})
-  add(printables,{s="start",x=25,y=55,t=-10})
-  add(printables,{s="start",x=25,y=65,t=0})
-  add(printables,{s="start",x=25,y=75,t=10})
-  add(printables,{s="start",x=25,y=85,t=20})
-  add(printables,{s="start",x=25,y=95,t=30})
-
-  add(printables,{s="start",x=0,y=45,t=-20})
-  add(printables,{s="start",x=0,y=55,t=-10})
-  add(printables,{s="start",x=0,y=65,t=0})
-  add(printables,{s="start",x=0,y=75,t=10})
-  add(printables,{s="start",x=0,y=85,t=20})
-  add(printables,{s="start",x=0,y=95,t=30})
-
-  add(printables,{s="start",x=50,y=45,t=-20})
-  add(printables,{s="start",x=50,y=55,t=-10})
-  add(printables,{s="start",x=50,y=65,t=0})
-  add(printables,{s="start",x=50,y=75,t=10})
-  add(printables,{s="start",x=50,y=85,t=20})
-  add(printables,{s="start",x=50,y=95,t=30})
-
-
+  
 end
 
 function _update()
@@ -177,24 +156,18 @@ function _update()
     mino=new_mino()
   end
   t+=1
-  if t%2==0 then
-    if btn(1) and mino.x+#mino.piece[1]+1<=#board[1] then
-      mino.x+=1
-    elseif btn(0) and mino.x>0 then
-      mino.x-=1
-    elseif btn(3) and not (mino.y+#mino.piece>#board) then
-      mino.y+=1
-    elseif btn(2) then -- cheater
-      mino.y-=1
-    elseif btn(5) and turning==false then -- rotate right
-      turning=true
-      mino.piece=rot_mino(mino.t,1)
-    elseif btn(4) and turning==false then
-      turning=true
-      mino.piece=rot_mino(mino.t,-1)
-    else
-      turning=false
-    end
+  if btnp(1) and mino.x+#mino.piece[1]+1<=#board[1] then
+    mino.x+=1
+  elseif btnp(0) and mino.x>0 then
+    mino.x-=1
+  elseif btnp(3) and not (mino.y+#mino.piece>#board) then
+    mino.y+=1
+  elseif btnp(2) then -- cheater
+    mino.y-=1
+  elseif btnp(5) then -- rotate right
+    mino.piece=rot_mino(mino.t,1)
+  elseif btnp(4) then
+    mino.piece=rot_mino(mino.t,-1)
   end
 end
 
@@ -288,7 +261,15 @@ function write_to_board(mino,board)
     mod.x=1
     for col in all(row) do
       if col!=0 then
-        board[mino.y+mod.y][mino.x+mod.x] = col
+        sumy = mino.y+mod.y
+        sumx = mino.x+mod.x
+        if sumy > #board then
+          sumy = #board
+        end
+        if sumx > #board[sumy] then
+          sumx = #board[sumy]
+        end
+        board[sumy][sumx] = col
       end
       mod.x+=1
     end
@@ -321,6 +302,8 @@ function clear_lines(board)
     end
     if line_full then
       full_lines+=1
+      //play sound, animation
+      erase_line(i)
     else
       add(cleared_board,new_row)
     end
@@ -354,6 +337,17 @@ function p_col(pr)
   end
   print(pr.s,pr.x,pr.y,flr(t%12))
   pr.t+=1
+end
+
+function erase_line(y)
+  for x=1,128 do
+    pset(x,y,5)
+    pset(x,y+1,6)
+    pset(x,y+2,7)
+    pset(x,y+3,8)
+    pset(x,y+4,9)
+    pset(x,y+5,10)
+  end
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
