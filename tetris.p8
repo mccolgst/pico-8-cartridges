@@ -8,6 +8,7 @@ function _init()
   can_place=false
   board = blank_board()
   printables={}
+  animations={}
   minos = {}
   minos.l = {
     {
@@ -120,27 +121,6 @@ function _init()
   t=0
   rot=1
   turning=false
-  add(printables,{s="start",x=25,y=45,t=-20})
-  add(printables,{s="start",x=25,y=55,t=-10})
-  add(printables,{s="start",x=25,y=65,t=0})
-  add(printables,{s="start",x=25,y=75,t=10})
-  add(printables,{s="start",x=25,y=85,t=20})
-  add(printables,{s="start",x=25,y=95,t=30})
-
-  add(printables,{s="start",x=0,y=45,t=-20})
-  add(printables,{s="start",x=0,y=55,t=-10})
-  add(printables,{s="start",x=0,y=65,t=0})
-  add(printables,{s="start",x=0,y=75,t=10})
-  add(printables,{s="start",x=0,y=85,t=20})
-  add(printables,{s="start",x=0,y=95,t=30})
-
-  add(printables,{s="start",x=50,y=45,t=-20})
-  add(printables,{s="start",x=50,y=55,t=-10})
-  add(printables,{s="start",x=50,y=65,t=0})
-  add(printables,{s="start",x=50,y=75,t=10})
-  add(printables,{s="start",x=50,y=85,t=20})
-  add(printables,{s="start",x=50,y=95,t=30})
-
 
 end
 
@@ -151,11 +131,16 @@ function _update()
   end
   
   for p in all(printables) do
-    if p.t>20 then
+    if p.t>p.ttl then
       del(printables,p)
     end
   end
   
+  for a in all(animations) do
+    if a.t>a.ttl then
+      del(animations,a)
+    end
+  end
   //mino cant go out of bounds
   if mino.x+#mino.piece[1]>#board[1] then
     local diff=#board[1]-(mino.x+#mino.piece[1])
@@ -209,6 +194,11 @@ function _draw()
 
   for p in all(printables) do
     p_col(p)
+  end
+  
+  for a in all(animations) do
+    line_clear_anim(a)
+    a.t+=1
   end
 end
 
@@ -288,7 +278,15 @@ function write_to_board(mino,board)
     mod.x=1
     for col in all(row) do
       if col!=0 then
-        board[mino.y+mod.y][mino.x+mod.x] = col
+        local dy=mino.y+mod.y
+        local dx=mino.x+mod.x
+        if mino.y+mod.y>#board then
+          dy = #board-1
+        end
+        if mino.x+mod.x>#board[dy] then
+          dx = #board[dy]
+        end
+        board[dy][dx] = col
       end
       mod.x+=1
     end
@@ -321,6 +319,7 @@ function clear_lines(board)
     end
     if line_full then
       full_lines+=1
+      add(animations,{y=i*size,t=0,ttl=.5*30}) 
     else
       add(cleared_board,new_row)
     end
@@ -343,7 +342,8 @@ function clear_lines(board)
     add(printables,{s="+"..full_lines,
                     x=100,
                     y=30,
-                    t=0})
+                    t=0,
+                    ttl=20})
   end
   return new_board
 end
@@ -354,6 +354,23 @@ function p_col(pr)
   end
   print(pr.s,pr.x,pr.y,flr(t%12))
   pr.t+=1
+end
+
+function line_clear_anim(obj)
+  line(0,obj.y-6,128/2-6,obj.y-6,8)
+  if obj.t>1 then  
+    line(0,obj.y-5,128/2-6,obj.y-5,9)
+  end
+  if obj.t>2 then  
+    line(0,obj.y-4,128/2-6,obj.y-4,10)
+  end
+  if obj.t>3 then  
+    line(0,obj.y-3,128/2-6,obj.y-3,11)
+  end
+  if obj.t>4 then  
+    line(0,obj.y-2,128/2-6,obj.y-2,12)
+  end
+
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
