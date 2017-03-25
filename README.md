@@ -19,5 +19,9 @@ https://mccolgst.itch.io/sokomeng
 ![west](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/west.png "West")
 ### SokoMeng
 ![sokomeng](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/sokomeng.png "SokoMeng")
+### conway's game of life 
+![tetris](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/life.png "Conway's game of life")
 ### RIP gabe
 ![rip_gabe](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/rip_gabe.png "RIP Gabe")
+### proceedural generation of cavelike structures
+![cave](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/caves.png "cave procgen")

@@ -1,380 +1,130 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
+grid = {}
+g_wid = 128
+
+i=0
+t=0
+
 function _init()
-  lines_cleared=0
-  size=6
-  speed=1
-  can_place=false
-  board = blank_board()
-  printables={}
-  animations={}
-  minos = {}
-  minos.l = {
-    {
-      {9,0},
-      {9,0},
-      {9,9},
-    },
-    {
-      {9,9,9},
-      {9,0,0},
-    },
-    {
-      {9,9},
-      {0,9},
-      {0,9},
-    },
-    {
-      {0,0,9},
-      {9,9,9},
-    },
-  }
-  minos.j = {
-    {
-      {0,1},
-      {0,1},
-      {1,1},
-    },
-    {
-      {1,0,0},
-      {1,1,1},
-    },
-    {
-      {1,1},
-      {1,0},
-      {1,0},
-    },
-    {
-      {1,1,1},
-      {0,0,1},
-    },
-  }
-  minos.i = {
-    {
-      {12,12,12,12},
-    },
-    {
-      {12},
-      {12},
-      {12},
-      {12},
-    },
-  }
-  minos.o = {
-    {
-      {10,10},
-      {10,10},
-    },
-  }
-  minos.s = {
-    {
-      {0,11,11},
-      {11,11,0},
-    },
-    {
-      {11,0},
-      {11,11},
-      {0,11},
-    },
-  }
-  minos.t = {
-    {
-      {0,2,0},
-      {2,2,2},
-    },
-    {
-      {2,0},
-      {2,2},
-      {2,0},
-    },
-    {
-      {2,2,2},
-      {0,2,0},
-    },
-    {
-      {0,2},
-      {2,2},
-      {0,2},
-    },
-  }
-  minos.z = {
-    {
-      {8,8,0},
-      {0,8,8},
-    },
-    {
-      {0,8},
-      {8,8},
-      {8,0},
-    },
-  }
-  rand_types={"l","z","t","s","o","i","j"}
-  rand_pieces = {minos.l[1],
-                 minos.j[1],
-                 minos.i[1],
-                 minos.o[1],
-                 minos.s[1],
-                 minos.t[1],
-                 minos.z[1]}
-  mino = new_mino()
-  t=0
-  rot=1
-
-  add(printables,{s="start",x=25,y=45,t=-20})
-  
-
-end
-
-function _update()
-  if t%(30/speed) == 0 and not (mino.y+#mino.piece>#board) then
-    t=0
-    mino.y+=1
-  end
-  
-  for p in all(printables) do
-    if p.t>p.ttl then
-      del(printables,p)
+  grid = {}
+  for row=1,g_wid do
+    gridrow = {}
+    for col=1,g_wid do
+      gridrow[col] = flr(rnd(2))
+      //gridrow[col] = 0
     end
+    add(grid, gridrow)
   end
-  
-  for a in all(animations) do
-    if a.t>a.ttl then
-      del(animations,a)
-    end
-  end
-  //mino cant go out of bounds
-  if mino.x+#mino.piece[1]>#board[1] then
-    local diff=#board[1]-(mino.x+#mino.piece[1])
-    mino.x+=diff
-  elseif mino.x<0 then
-    mino.x=0
-  end
-  //check if we need to increase speed
-  if lines_cleared/10>speed then
-    speed+=1
-  end
-  board=clear_lines(board)
-  
-  
-  //check if this mino is placeable
-  can_place=can_place_mino(mino,board)
-  if can_place==true then
-    write_to_board(mino,board)
-    mino=new_mino()
-  end
-  t+=1
-  if btnp(1) and mino.x+#mino.piece[1]+1<=#board[1] then
-    mino.x+=1
-  elseif btnp(0) and mino.x>0 then
-    mino.x-=1
-  elseif btnp(3) and not (mino.y+#mino.piece>#board) then
-    mino.y+=1
-  elseif btnp(2) then -- cheater
-    mino.y-=1
-  elseif btnp(5) then -- rotate right
-    mino.piece=rot_mino(mino.t,1)
-  elseif btnp(4) then
-    mino.piece=rot_mino(mino.t,-1)
-  end
+  //grid[2][2]=1
+  //grid[3][3]=1
+  //grid[4][3]=1
+  //grid[4][2]=1
+  //grid[4][1]=1
 end
 
 function _draw()
   cls()
-  //draw_board(board)
-  draw_obj(board,false)
-  draw_obj(mino,true)
-  print("lines: "..lines_cleared,70,30,12)
-  print("level: "..speed,70,40,12)
-  //p_col("test",70,50)
+  for row=1,g_wid do
+    for col=1,g_wid do
+      pset(row,col,grid[row][col]+7)
+    end
+  end
+end
 
-  for p in all(printables) do
-    p_col(p)
+
+function _update()
+  i+=1
+  if t%5==0 then
+    grid = do_iteration(grid)
+  end
+  if btnp(5) then
+    i=0
+    _init()
+  end
+  t+=1
+end
+
+function do_iteration(input_grid)
+  local new_grid = {}
+  for x=1,g_wid do
+    new_row = {}
+    for y=1,g_wid do
+      add(new_row, is_alive(x,y, input_grid))
+    end
+    add(new_grid, new_row)
   end
   
-  for a in all(animations) do
-    line_clear_anim(a)
-    a.t+=1
+  return new_grid
+end
+
+function is_alive(x,y,input_grid)
+  local sum_neighbors=0
+  local is_alive=0
+  
+  if x > 1 then
+    if y > 1 then
+      sum_neighbors+=input_grid[x-1][y-1]
+    end
+    sum_neighbors+=input_grid[x-1][y]
+    if y < g_wid then
+      //printh("x:"..x.." y:"..y)
+      sum_neighbors+=input_grid[x-1][y+1]
+    end
   end
-end
-
-function new_mino()
-  local mino = {}
-  mino.x=4
-  mino.y=0
-  local t=rand_types[flr(rnd(7)+1)]
-  mino.t=t
-  mino.piece=minos[t][1]
-  return mino
-end
-
-function blank_board()
-  local board = {}
-  for row=1,21 do
-    board[row] = {}
-      for col=1,10 do
-        board[row][col]=0
-      end
+  if y > 1 then
+    sum_neighbors+=input_grid[x][y-1]
   end
-  return board
-end
+  // skip this one sum_neighbors+=input_grid[y][x]
+  if y < g_wid then
+    sum_neighbors+=input_grid[x][y+1]
+  end
+  if x < g_wid then
+    if y > 1 then
+      sum_neighbors+=input_grid[x+1][y-1]
+    end
+    sum_neighbors+=input_grid
+    [x+1][y]
+    if y < g_wid then
+      sum_neighbors+=input_grid[x+1][y+1]
+    end
+  end
+  if input_grid[x][y]==1 then
+    // this cell is alive
+    if sum_neighbors < 2 then
+      // underpopulation, live cell dies
+      //printh("x:"..x.." y:"..y.." underpopulation..")
+      is_alive=0
+    elseif sum_neighbors == 2 or sum_neighbors == 3 then
+      // enough neighbors to live to next gen
+      //printh("x:"..x.." y:"..y.." enough to live on "..sum_neighbors)
+      
+      is_alive=1
+    elseif sum_neighbors > 3 then
+      // overpopulation, cell dies
+      //printh("x:"..x.." y:"..y.." overpopulation.."..sum_neighbors)
+      
+      is_alive=0
+    end
 
-function draw_obj(obj,is_mino)
-  local mod = {x=0,y=0}
-  local x,y = 0,0
-  local drawable = obj
-  if is_mino then
-    x,y=obj.x*size,obj.y*size
-    drawable=obj.piece
   else
-    drawable=obj
-  end
-  for row in all(drawable) do
-    mod.x=0
-    for col in all(row) do
-      local clr=col
-      if col==0 then
-        clr=5
-      end
-      rectfill(x+mod.x,
-               y+mod.y,
-               x+mod.x+size-2,
-               y+mod.y+size-2,
-               clr)
-      mod.x+=size
-    end
-    mod.y+=size
-  end
-end
-
-function can_place_mino(p,board)
-  local mod={x=1,y=1}
-
-  for row in all(p.piece) do
-    mod.x=1
-    if p.y+#p.piece >= #board then
-      return true
-    end
-    for col in all(row) do
-      if col!=0 then
-        if board[p.y+mod.y+1][p.x+mod.x] !=0 then
-          return true
-        end
-      end
-      mod.x+=1
-    end
-    mod.y+=1
-  end
-  return false
-end
-
-function write_to_board(mino,board)
-  local mod={x=1,y=1}
-  for row in all(mino.piece) do
-    mod.x=1
-    for col in all(row) do
-      if col!=0 then
-        sumy = mino.y+mod.y
-        sumx = mino.x+mod.x
-        if sumy > #board then
-          sumy = #board
-        end
-        if sumx > #board[sumy] then
-          sumx = #board[sumy]
-        end
-        board[sumy][sumx] = col
-      end
-      mod.x+=1
-    end
-    mod.y+=1
-  end
-end
-
-function rot_mino(mino_type,direc)
-  rot+=direc
-  if direc==-1 and rot<1 then
-    rot=#minos[mino_type]
-  elseif direc==1 and rot>#minos[mino_type] then
-    rot=1
-  end
-  return minos[mino_type][rot]
-end
-
-function clear_lines(board)
-  local full_lines=0
-  local cleared_board={}
-
-  for i=1,#board do
-    line_full=true
-    new_row={}
-    for j=1,#board[1] do
-      new_row[j]=board[i][j]
-      if board[i][j]==0 then
-        line_full=false
-      end
-    end
-    if line_full then
-      full_lines+=1
-      add(animations,{y=i*size,t=0,ttl=.5*30}) 
-    else
-      add(cleared_board,new_row)
+    // this cell is dead
+    if sum_neighbors == 3 then
+      //if dead with 3 neighbors, created as if reproduction
+      is_alive=1
     end
   end
-  // create board of blank rows
-  // for each full line counted
-  // then add the rest of the 
-  // old board to it
-  // row by row
-  new_board={}
-  for i=1,full_lines do
-    add(new_board,{0,0,0,0,0,
-                   0,0,0,0,0})
-  end
-  for row in all(cleared_board) do
-    add(new_board,row)
-  end
-  lines_cleared+=full_lines
-  if full_lines>=1 then
-    add(printables,{s="+"..full_lines,
-                    x=100,
-                    y=30,
-                    t=0,
-                    ttl=20})
-  end
-  return new_board
-end
-
-function p_col(pr)
-  if t%5 then
-    pr.y-=1
-  end
-  print(pr.s,pr.x,pr.y,flr(t%12))
-  pr.t+=1
-end
-
-function line_clear_anim(obj)
-  line(0,obj.y-6,128/2-6,obj.y-6,8)
-  if obj.t>1 then  
-    line(0,obj.y-5,128/2-6,obj.y-5,9)
-  end
-  if obj.t>2 then  
-    line(0,obj.y-4,128/2-6,obj.y-4,10)
-  end
-  if obj.t>3 then  
-    line(0,obj.y-3,128/2-6,obj.y-3,11)
-  end
-  if obj.t>4 then  
-    line(0,obj.y-2,128/2-6,obj.y-2,12)
-  end
-
+  
+  return is_alive
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000

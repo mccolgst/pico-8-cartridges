@@ -2,7 +2,7 @@ pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
 grid = {}
-g_wid = 128/2
+g_wid = 128/4
 i=0
 t=0
 
@@ -43,9 +43,9 @@ end
 
 function do_iteration(grid)
   local new_grid = {}
-  for y=1,g_wid do
+  for x=1,g_wid do
     new_row = {}
-    for x=1,g_wid do
+    for y=1,g_wid do
       add(new_row, is_wall(x,y, grid))
     end
     add(new_grid, new_row)
@@ -54,36 +54,36 @@ function do_iteration(grid)
   return new_grid
 end
 
-function is_wall(x,y,grid)
+function is_wall(x,y,input_grid)
   local sum_neighbors=0
   local is_wall=0
   
-  if y > 1 then
-    if x > 1 then
-      sum_neighbors+=grid[y-1][x-1]
+  if x > 1 then
+    if y > 1 then
+      sum_neighbors+=input_grid[x-1][y-1]
     end
-    sum_neighbors+=grid[y-1][x]
-    if x < g_wid then
-      sum_neighbors+=grid[y-1][x+1]
+    sum_neighbors+=input_grid[x-1][y]
+    if y < g_wid then
+      sum_neighbors+=input_grid[x-1][y+1]
     end
   end
-  if x > 1 then
-    sum_neighbors+=grid[y][x-1]
+  if y > 1 then
+    sum_neighbors+=input_grid[x][y-1]
   end
   // skip this one sum_neighbors+=grid[y][x]
-  if x < g_wid then
-    sum_neighbors+=grid[y][x+1]
-  end
   if y < g_wid then
-    if x > 1 then
-      sum_neighbors+=grid[y+1][x-1]
+    sum_neighbors+=input_grid[x][y+1]
+  end
+  if x < g_wid then
+    if y > 1 then
+      sum_neighbors+=input_grid[x+1][y-1]
     end
-    sum_neighbors+=grid[y+1][x]
-    if x < g_wid then
-      sum_neighbors+=grid[y+1][x+1]
+    sum_neighbors+=input_grid[x+1][y]
+    if y < g_wid then
+      sum_neighbors+=input_grid[x+1][y+1]
     end
   end
-  if grid[y][x] then
+  if grid[x][y]==1 then
 				// need 4 neighbors to become wall
     if sum_neighbors > 4 then
       is_wall=1
