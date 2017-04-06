@@ -25,3 +25,5 @@ https://mccolgst.itch.io/sokomeng
 ![rip_gabe](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/rip_gabe.png "RIP Gabe")
 ### proceedural generation of cavelike structures
 ![cave](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/caves.png "cave procgen")
+### ADFGX - German cipher from WWI
+![cipher](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/cipher.png "cipher")
