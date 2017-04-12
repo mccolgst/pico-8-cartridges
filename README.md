@@ -27,3 +27,5 @@ https://mccolgst.itch.io/sokomeng
 ![cave](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/caves.png "cave procgen")
 ### ADFGX - German cipher from WWI
 ![cipher](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/cipher.png "cipher")
+### chicken
+![chicken](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/chicken.png "chicken")
