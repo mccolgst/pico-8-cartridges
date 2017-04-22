@@ -12,7 +12,8 @@ You can play SokoMeng here:
 https://mccolgst.itch.io/sokomeng
 
 ## screenshots
-
+### world
+![world](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/world.png "world")
 ### tetris
 ![tetris](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/tetris.png "Tetris")
 ### west
