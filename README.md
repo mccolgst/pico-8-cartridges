@@ -11,6 +11,9 @@ These are some cartridges that I have been working on using pico-8
 You can play SokoMeng here:
 https://mccolgst.itch.io/sokomeng
 
+Momma ZILLA:
+https://mccolgst.itch.io/momma-zilla
+
 ## screenshots
 ### Momma ZILLA
 ### LD Dare 38 entry
