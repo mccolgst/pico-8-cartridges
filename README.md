@@ -19,6 +19,7 @@ https://mccolgst.itch.io/momma-zilla
 ### LD Dare 38 entry
 
 ![momma ZILLA](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/momma_zilla.png "momma zilla")
+https://ldjam.com/events/ludum-dare/38/momma-zilla
 ### tetris
 ![tetris](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/tetris.png "Tetris")
 ### west
