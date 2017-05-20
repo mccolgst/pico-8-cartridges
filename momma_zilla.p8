@@ -6,6 +6,7 @@ max_missiles=2
 max_babies=5
 max_buildings=8
 max_vehicles=3
+max_ppl=10
 time_remaining=120
 done=false
 t=0
@@ -25,19 +26,19 @@ smoke.frames=4
 baby_cd=30*5
 missile_speed=1.5
 fire_speed=2
-title_screen=true
 title_sfx=false
 title_show_msg=1
 title_y=0
 heart_s=11
 p = {}
-p.speed=.75
+p.init_speed=1.25
+p.hurt_speed=.75
+p.speed=1.25
 p.dy=0
 p.dx=0
 p.s=1
 p.frames=4
 p.t=0
-p.health=100
 p.invuln=false
 p.invuln_cd=0
 p.fire_cd=0
@@ -113,7 +114,7 @@ function update_game()
     end
     p.dx=0
     p.dy=0
-    if btnp(4) and p.t > p.fire_cd then
+    if btnp(4) and p.t>p.fire_cd then
       shoot()
     end
     if btnp(5) then
@@ -147,10 +148,11 @@ function update_game()
       p.s=1+p.t%p.frames
     end
 
-    if p.x < 8 and not p.invuln then
+    if p.x<8 and not p.invuln then
       hurt_player()
     end
     if p.invuln_cd<p.t then
+      p.speed=p.init_speed
       p.invuln=false
     end
     for fire in all(fires) do
@@ -290,10 +292,8 @@ function draw_game()
     pset(pers.x,pers.y,pers.c)
   end
   draw_hud()
-  if p.health<=0 then
-    game_over(true)
-  elseif time_remaining<=0 then
-    game_over(false)
+  if time_remaining<=0 then
+    game_over()
   end
 end
 
@@ -488,10 +488,6 @@ function check_collision(thing1, thing2)
 end
 
 function draw_hud()
-
-  //health
-  rect(10,2,10+36,6,6)
-  rectfill(11,3,11+p.health*.36-1,5,3)
   //score
   print("score",80,3,6)
   print(score,90,10,6)
@@ -505,7 +501,7 @@ end
 
 function hurt_player()
   if p.invuln==false then
-    p.health-=33
+    p.speed=p.hurt_speed
     p.invuln=true
     p.invuln_cd=(3*30)+p.t
     sfx(2)
@@ -513,7 +509,10 @@ function hurt_player()
 end
 function update_building(build)
   if build.destroyed==false and check_collision(p,build) then
-    p.dx=-1
+    build.destroyed=true
+    build.s=flr(rnd(4))+16
+    sfx(0)
+    score+=flr(rnd(5))
   end
   build.x-=1
 
@@ -538,7 +537,7 @@ function update_building(build)
 end
 
 function create_ppl(x,y)
-  for i=0,flr(rnd(15)) do
+  for i=0,flr(rnd(max_ppl)) do
     local pers = {}
     pers.t=0
     pers.x=x
@@ -578,9 +577,6 @@ function update_ppl()
       pers.dy=0
       pers.c=8
       score+=1
-      if p.health<100 then
-        p.health+=.2
-      end
     end
   end
   
@@ -591,15 +587,11 @@ function update_ppl()
   end
 end
 
-function game_over(lost)
+function game_over()
   cls()
   done=true
   print("you have",128/2-30,128/2,6)
-  if lost then
-    print("been vanquished!",128/2-25,128/2+10,6)
-  else
-    print("punished humanity!",128/2-25,128/2+10,6) 
-  end
+  print("punished humanity!",128/2-25,128/2+10,6)
   print("score: "..score,128/2-25, 128/2+20,6)
 end
 
