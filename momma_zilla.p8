@@ -6,7 +6,7 @@ max_missiles=2
 max_babies=5
 max_buildings=8
 max_vehicles=3
-max_ppl=10
+max_ppl=5
 time_remaining=120
 done=false
 t=0
@@ -18,6 +18,8 @@ missiles={}
 babies={}
 vehicles={}
 plx_scrls = {}
+particle_colors={7,10,9,4,2}
+fx={}
 smoke={}
 smoke.x=0
 smoke.y=0
@@ -58,7 +60,6 @@ function _init()
     init_title()
   else
     init_game()
-
   end
 end
 
@@ -74,6 +75,8 @@ end
 
 function init_game()
   music(0)
+  p.x=40
+  p.y=60
   for i=0,max_buildings do
     create_buildings()
   end
@@ -201,7 +204,9 @@ function update_game()
     for b in all(babies) do
       update_baby(b)
     end
-  
+    for f in all(fx) do
+      update_fx(f)
+    end
     for v in all(vehicles) do
       update_vehicle(v)
     end
@@ -274,6 +279,9 @@ function draw_game()
   end
   for v in all(vehicles) do
     spr(v.s,v.x,v.y)
+  end
+  for f in all(fx) do
+    draw_fx(f)
   end
   if p.invuln and t%5==0 then
     p.s=2+p.t%p.frames
@@ -366,7 +374,49 @@ function create_buildings()
   b.s=sp+49
   add(buildings,b)
 end
-
+function create_fx(x,y)
+  local f={}
+  f.x=x
+  f.y=y
+  f.t=30
+  f.particles={}
+  for i=1,5 do
+    local p={}
+    p.x=x
+    p.y=y
+    p.dy=-rnd(1)
+    p.dx=rnd(1)
+    add(f.particles,p)
+  end
+  for i=1,rnd(10) do
+    local p={}
+    p.x=x
+    p.y=y
+    p.dy=rnd(1)
+    p.dx=rnd(1)
+    add(f.particles,p)
+  end
+  add(fx,f)  
+end
+function update_fx(f)
+  for p in all(f.particles) do
+    if f.t%5==0 then
+      p.c=flr(particle_colors[flr(rnd(#particle_colors))])
+      p.dy+=.2
+    end
+    p.x+=p.dx
+    p.y+=p.dy
+  end
+  f.t-=1
+  if f.t<=0 then
+    del(fx,f)
+  end
+end
+function draw_fx(f)
+  for p in all(f.particles) do
+    pset(p.x,p.y,p.c)
+  end
+end
 function create_baby()
   local b = {}
   b.x=rnd(128)+128
@@ -521,15 +571,16 @@ function update_building(build)
 
   if build.destroyed == false then
     for fire in all(fires) do
-    if check_collision(fire, build) then
-      fire.done=true
-      build.destroyed=true
-      score+=flr(rnd(5))
-      sfx(0)
-      build.s=flr(rnd(4))+16
-      //create running ppl
-      create_ppl(build.x, build.y)  
-    end
+      if check_collision(fire, build) then
+        fire.done=true
+        build.destroyed=true
+        score+=flr(rnd(5))
+        create_fx(build.x,build.y)
+        sfx(0)
+        build.s=flr(rnd(4))+16
+        //create running ppl
+        create_ppl(build.x, build.y)  
+      end
     end
   end
   
