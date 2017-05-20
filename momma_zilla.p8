@@ -22,15 +22,15 @@ smoke.x=0
 smoke.y=0
 smoke.s=30
 smoke.frames=4
-baby_cd=0
+baby_cd=30*5
 missile_speed=1.5
 fire_speed=2
 title_screen=true
 title_sfx=false
 title_show_msg=1
+title_y=0
+heart_s=11
 p = {}
-p.x=50
-p.y=50
 p.speed=.75
 p.dy=0
 p.dx=0
@@ -41,36 +41,58 @@ p.health=100
 p.invuln=false
 p.invuln_cd=0
 p.fire_cd=0
+p.x=128/2-12
+p.y=128/2-14
 
+// mode
+// 0 = title screen
+// 1 = game
+// todo: tutorial screen?
+//
+
+mode=0
 
 function _init()
   //music(0)
-  heart_s=11
-  for i=0,max_buildings do
-    create_buildings()
+  if mode==0 then
+    init_title()
+  else
+    init_game()
   end
-  for i=0,max_missiles do
-    create_missile()
-  end
-  
+end
+
+function init_title()
   for i=1,max_babies do
     local b = create_baby()
     b.active=true
     b.x=rnd(128)
     b.y=rnd(128)
   end
-  p.x=128/2-12
-  p.y=128/2-14
-  baby_cd = 30 * 5
-  title_y=0
+end
+
+function init_game()
+  for i=0,max_buildings do
+    create_buildings()
+  end
+  for i=0,max_missiles do
+    create_missile()
+  end
   new_plx_scrl(2,16,0,15,-.1,128)
   new_plx_scrl(2,16,0,15,-.2,176)
   new_plx_scrl(2,16,0,20,-.3,224)
-  
-  
 end
 
-function do_title_screen()
+function _update()
+  t+=1
+  if mode==0 then
+    update_title()
+  end
+  if mode==1 then
+    update_game()
+  end
+end
+
+function update_title()
   p.t+=1
   if title_y<30 then
     title_y+=t/8
@@ -79,157 +101,158 @@ function do_title_screen()
     update_baby(b)
   end
   if btnp(4) then
-    title_screen=false
-    babies = {}
+    mode+=1
+    init_game()
+    babies={}
   end
 end
-
-function _update()
-  if t%30==0 then 
-    time_remaining-=1
-  end
-  t+=1
-  if title_screen then
-    do_title_screen()
-  end
-  if not title_screen and not done then
-  p.dx=0
-  p.dy=0
-  if btnp(4) and p.t > p.fire_cd then
-    shoot()
-  end
-  if btnp(5) then
-    blink()
-  end
-  if btn(0) then
-    p.dx=-p.speed
-  elseif btn(1) then
-    p.dx=p.speed
-  end
-  
-  
-  if btn(2) then
-    // move player up
-    p.dy=-p.speed
-  elseif btn(3) then
-    // move player down
-    p.dy=p.speed
-  else
+function update_game()
+  if not done then
+    if t%30==0 then 
+      time_remaining-=1
+    end
+    p.dx=0
     p.dy=0
-  end
-
-  
-  if #babies < max_babies and baby_cd < t then
-    create_baby()
-  end
-  
-  if #vehicles < max_vehicles then
-    create_vehicle()
-  end
-  
-  if t%5==0 then
-    p.s=1+p.t%p.frames
-  end
-
-  if p.x < 8 and not p.invuln then
-    hurt_player()
-  end
-  if p.invuln_cd<p.t then
-    p.invuln=false
-  end
-  for fire in all(fires) do
-    fire.t+=1
-    fire.s=33+fire.t%fire.frames
-    fire.x+=fire.dx
-    if fire.x>128 then
-      fire.done=true
+    if btnp(4) and p.t > p.fire_cd then
+      shoot()
     end
-  end
-  for build in all(buildings) do
-    update_building(build)
-  end
-  update_ppl()
-  for m in all(missiles) do
-    if check_collision(p,m) then
+    if btnp(5) then
+      blink()
+    end
+    if btn(0) then
+      p.dx=-p.speed
+    elseif btn(1) then
+      p.dx=p.speed
+    end
+  
+    if btn(2) then
+      // move player up
+      p.dy=-p.speed
+    elseif btn(3) then
+      // move player down
+      p.dy=p.speed
+    else
+      p.dy=0
+    end
+  
+    if #babies < max_babies and baby_cd < t then
+      create_baby()
+    end
+  
+    if #vehicles < max_vehicles then
+      create_vehicle()
+    end
+  
+    if t%5==0 then
+      p.s=1+p.t%p.frames
+    end
+
+    if p.x < 8 and not p.invuln then
       hurt_player()
-      m.x+=128+rnd(128)
-      m.y=rnd(128)
-      m.dx=1+rnd(missile_speed)
     end
-    m.t+=1
-    m.x-=m.dx
-    m.s=38+m.t%m.frames
-    if m.x < 0 then
-      m.x+=128+rnd(128)
-      m.y=rnd(128)
-      m.dx=1+rnd(missile_speed)
+    if p.invuln_cd<p.t then
+      p.invuln=false
     end
-  end
-  for fire in all(fires) do
-    if fire.done then
-      del(fires,fire)
+    for fire in all(fires) do
+      fire.t+=1
+      fire.s=33+fire.t%fire.frames
+      fire.x+=fire.dx
+      if fire.x>128 then
+        fire.done=true
+      end
     end
-  end
+    for build in all(buildings) do
+      update_building(build)
+    end
+    update_ppl()
+    for m in all(missiles) do
+      if check_collision(p,m) then
+        hurt_player()
+        m.x+=128+rnd(128)
+        m.y=rnd(128)
+        m.dx=1+rnd(missile_speed)
+      end
+      m.t+=1
+      m.x-=m.dx
+      m.s=38+m.t%m.frames
+      if m.x < 0 then
+        m.x+=128+rnd(128)
+        m.y=rnd(128)
+        m.dx=1+rnd(missile_speed)
+      end
+    end
+    for fire in all(fires) do
+      if fire.done then
+        del(fires,fire)
+      end
+    end
 
-  if t%100==0 then
-    for i=0,max_buildings do
-      create_buildings()
+    if t%100==0 then
+      for i=0,max_buildings do
+        create_buildings()
+      end
     end
-  end
 
-  for b in all(babies) do
-    update_baby(b)
-  end
+    for b in all(babies) do
+      update_baby(b)
+    end
   
-  for v in all(vehicles) do
-    update_vehicle(v)
-  end
-  for v in all(vehicles) do
-    if v.x<0 then
-      del(vehicles,v)
+    for v in all(vehicles) do
+      update_vehicle(v)
     end
-  end
-  foreach(plx_scrls, update_plx_scrl)
-  p.y+=p.dy
-  p.x+=p.dx
-  p.t+=1
+    for v in all(vehicles) do
+      if v.x<0 then
+        del(vehicles,v)
+      end
+    end
+    foreach(plx_scrls, update_plx_scrl)
+    p.y+=p.dy
+    p.x+=p.dx
+    p.t+=1
   end
 end
+
 
 function _draw()
   cls()
-  if title_screen then
-    spr(101,45,title_y,5,2)
-    
-    if title_y>30 then
-      if title_sfx==false then
-        title_sfx=true
-        sfx(8)
-      end
-      if t%20==0 then
-        title_show_msg*=-1
-      end
-      if t%7==0 then
-        heart_s=11+t%2
-      end
-      spr(heart_s,128/2-6,128/2-20)
-      if t%5==0 then
-        p.s=1+p.t%p.frames
-      end
-      for b in all(babies) do
-        spr(b.s,b.x,b.y)
-      end
-      spr(p.s,p.x,p.y)
-      if title_show_msg>0 then
-        print("press z to start",35,63,7)
-      end
-      print("z=fireball, x=blink",30,73,1)
-      print("mother nature has summoned you",7,83,1)
-      print("to destroy as much as you can",10,93,1)
-      print("before time is up",30,103,1)
-
-    end
+  if mode==0 then
+    draw_title()
   else
+    draw_game()
+  end
+end
+function draw_title()
+  spr(101,45,title_y,5,2)
+    
+  if title_y>30 then
+    if title_sfx==false then
+      title_sfx=true
+      sfx(8)
+    end
+    if t%20==0 then
+      title_show_msg*=-1
+    end
+    if t%7==0 then
+      heart_s=11+t%2
+    end
+    spr(heart_s,128/2-6,128/2-20)
+    if t%5==0 then
+      p.s=1+p.t%p.frames
+    end
+    for b in all(babies) do
+      spr(b.s,b.x,b.y)
+    end
+    spr(p.s,p.x,p.y)
+    if title_show_msg>0 then
+      print("press z to start",35,63,7)
+    end
+    print("z=fireball, x=blink",30,73,1)
+    print("mother nature has summoned you",7,83,1)
+    print("to destroy as much as you can",10,93,1)
+    print("before time is up",30,103,1)
+  end
+end
+function draw_game()
   for b in all(buildings) do
     spr(b.s,b.x,b.y)
   end
@@ -271,7 +294,6 @@ function _draw()
     game_over(true)
   elseif time_remaining<=0 then
     game_over(false)
-  end
   end
 end
 
