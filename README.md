@@ -7,6 +7,8 @@ http://www.lexaloffle.com/pico-8.php
 
 These are some cartridges that I have been working on using pico-8
 ## play
+CGA Jam Entry:
+https://mccolgst.itch.io/cga-race
 
 You can play SokoMeng here:
 https://mccolgst.itch.io/sokomeng
@@ -15,6 +17,9 @@ Momma ZILLA:
 https://mccolgst.itch.io/momma-zilla
 
 ## screenshots
+### CGA JAM ENTRY:
+![cga jam](https://github.com/mccolgst/pico-8-cartridges/blob/master/screenshots/cgajam.gif "cga jam entry")
+
 ### Momma ZILLA
 ### LD Dare 38 entry
 
