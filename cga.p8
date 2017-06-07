@@ -26,6 +26,9 @@ mode=0
 waveparts={}
 powerups={}
 fuels={}
+fuel_capts={}
+boost_anims={}
+colors = {0,7,14}
 
 function _init()
   music(0)
@@ -76,11 +79,14 @@ function update_game()
   end
 
   -- x speed controls
+  p.max_speed=3+(universal_speed/5)
+  p.speed=.5+(universal_speed/12)
   if btn(0) and p.dx>-p.max_speed then p.dx-=p.speed
   elseif btn(1) and p.dx<p.max_speed then p.dx+=p.speed
   else
     -- if not pressing anything, slow down at half speed
     if p.dx<0 then p.dx+=p.speed*.5
+    elseif -0.5<p.dx and p.dx<0.5 then p.dx=0
     elseif p.dx>0 then p.dx-=p.speed*.5 end
   end
 
@@ -88,8 +94,9 @@ function update_game()
   elseif btn(3) and p.dy<p.max_speed then p.dy+=p.speed
   else
     -- if not pressing anything, slow down at half speed
-    if p.dy<0 then p.dy+=p.speed
-    elseif p.dy>0 then p.dy-=p.speed end
+    if p.dy<0 then p.dy+=p.speed*.5
+    elseif -0.5<p.dy and p.dy<0.5 then p.dy=0
+    elseif p.dy>0 then p.dy-=p.speed*.5 end
   end
   if p.x>=100 then
     p.x-=1
@@ -102,6 +109,8 @@ function update_game()
   update_waveparts()
   update_powerups()
   update_fuels()
+  update_fuel_capts()
+  update_boost_anims()
   if t%10==0 then
       score+=flr(universal_speed)
       p.fuel-=5
@@ -119,6 +128,7 @@ function update_endgame()
     powerups={}
     fuels={}
     mode-=1
+    p.speed=.5
   end
 end
 
@@ -145,6 +155,9 @@ function update_powerups()
     powerup.y+=universal_speed
     -- collision checks
     if not powerup.active and check_collision(p, powerup) then
+      create_boost_anim(p.x,p.y)
+      sfx(5)
+      printh("create boost anim!"..#boost_anims)
       universal_speed+=universal_speed_inc
       if universal_speed>high_speed then high_speed=universal_speed end
       powerup.active=true
@@ -169,6 +182,8 @@ function update_fuels()
     fuel.y+=universal_speed
 
     if check_collision(p, fuel) then
+      sfx(5)
+      create_fuel_capt(fuel.x,fuel.y)
       fuel.y+=128
       if p.fuel<900 then p.fuel+=100 
       else p.fuel=1000 end
@@ -176,6 +191,36 @@ function update_fuels()
     -- destroy fuel if it's offscreen
     if fuel.y>128 then
       del(fuels, fuel)
+    end
+  end
+end
+
+function update_fuel_capts()
+  for fuel_capt in all(fuel_capts) do
+    fuel_capt.t+=1
+    fuel_capt.r=fuel_capt.t
+    -- update fuel capture circle color
+    color_idx=fuel_capt.t%#colors
+    fuel_capt.color = colors[color_idx+1]
+    if fuel_capt.t%60==0 then
+      del(fuel_capts,fuel_capt)
+    end
+  end
+end
+
+function update_boost_anims()
+  for boost_anim in all(boost_anims) do
+    boost_anim.t+=1
+    boost_anim.r=boost_anim.t
+    -- update fuel capture circle color
+    color_idx=boost_anim.t%#colors
+    boost_anim.color = colors[color_idx+1]
+    for particle in all(boost_anim.particles) do
+      particle.x+=particle.dx
+      particle.y+=particle.dy
+    end
+    if boost_anim.t%15==0 then
+      del(boost_anims,boost_anim)
     end
   end
 end
@@ -235,6 +280,8 @@ function _draw()
     draw_waveparts()
     draw_powerups()
     draw_fuels()
+    draw_fuel_capts()
+    draw_boost_anims()
     draw_hud()
     draw_player()
   elseif mode==2 then
@@ -370,6 +417,38 @@ function draw_fuels()
   end
 end
 
+function draw_fuel_capts()
+  for fuel_capt in all(fuel_capts) do
+    circ(fuel_capt.x,
+         fuel_capt.y,
+         fuel_capt.r*6,
+         fuel_capt.color)
+    circ(fuel_capt.x+rnd(10),
+         fuel_capt.y+rnd(10),
+         fuel_capt.r*4,
+         fuel_capt.color)
+    circ(fuel_capt.x-rnd(10),
+         fuel_capt.y-rnd(10),
+         fuel_capt.r*5,
+         fuel_capt.color)
+    print("fuel++", fuel_capt.x,fuel_capt.y,fuel_capt.color)
+  end
+end
+
+function draw_boost_anims()
+  for boost_anim in all(boost_anims) do
+    for particle in all(boost_anim.particles) do
+      --pset(particle.x,particle.y,boost_anim.color)
+      circ(particle.x,particle.y,rnd(2),boost_anim.color)
+    end
+    --line(p.x,p.y+8,p.x,      p.y+14+(boost_anim.t),boost_anim.color)
+    --line(p.x+3,p.y+8,p.x+3,  p.y+14+(boost_anim.t),boost_anim.color)
+    --line(p.x+6,p.y+8,p.x+6,  p.y+14+(boost_anim.t),boost_anim.color)
+    print("speed++", boost_anim.x,boost_anim.y,boost_anim.color)
+  end
+end
+
+
 function draw_hud()
   pretty_print("fuel:",0,1,7)
   -- black outline rect
@@ -380,7 +459,7 @@ function draw_hud()
   -- line that outlines end of meter
   line(endx,1,endx,5,0)
   pretty_print("score:"..score,0,7,7)
-  pretty_print("spd:"..universal_speed,0,14,7)
+  pretty_print("speed:"..universal_speed,0,14,7)
 end
 
 function draw_end_game()
@@ -390,6 +469,43 @@ function draw_end_game()
   pretty_print("score: "..flr(score),46,63,7)
   pretty_print("fastest speed: "..high_speed,30,71,7)
   pretty_print("press x to restart",25,79,7)
+end
+
+function create_fuel_capt(x,y)
+  fuel_capt = {}
+  fuel_capt.x=x
+  fuel_capt.y=y
+  fuel_capt.t=0
+  fuel_capt.r=0
+  fuel_capt.color=colors[0]
+  add(fuel_capts, fuel_capt)
+end
+
+function create_boost_anim(x,y)
+  boost_anim = {}
+  boost_anim.x=x
+  boost_anim.y=y
+  boost_anim.t=0
+  boost_anim.color=colors[0]
+  boost_anim.particles={}
+  for i=0,rnd(20) do
+    particle={}
+    coin=flr(rnd(2))
+    rndx=rnd(4)
+    if coin==0 then rndx=-rndx end
+    coin=flr(rnd(2))
+    rndy=rnd(4)
+    if coin==0 then rndy=-rndy end
+    particle.x=p.x+rndx
+    particle.y=p.y+rndy
+    particle.dx=rnd(5)
+    particle.dy=rnd(5)
+    if coin==0 then
+      particle.dx*=-1
+    end
+    add(boost_anim.particles, particle)
+  end
+  add(boost_anims, boost_anim)
 end
 
 function create_wavepart()
@@ -594,6 +710,7 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+
 __gff__
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
@@ -636,7 +753,7 @@ __sfx__
 011300000e5011c5031057310573000001c5031057300000000001c5031057310573000001c5031057300000000001c5031057310573000001c5031057300000000001c5031057310503000001c5031057300000
 011300001f0751f0751e0751e07513000130051f0751f0751e0751e07513005130051f0751f0750e0051a075000001c075000001c7721c7701007510005100051000500000000001d4051c505136051f70500000
 011300001707515075170751507517005130051707515075170751507515005000001707517005120051207512005130051307513075130750000000000000000000000000000000000000000000000000000000
-001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00010000067500575005750057500675007750077500775007750077500a7500875009750097500a7500c7500e750117501375015750187501d7501f750227502675029750277503075036750377503c7503f750
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 001000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
