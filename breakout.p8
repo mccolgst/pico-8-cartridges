@@ -1,53 +1,83 @@
 pico-8 cartridge // http://www.pico-8.com
 version 8
 __lua__
-player = {}
-player.lives = 2
-player.dx = 0
-player.dy = 0
-player.x = 128/2
-player.y = 120
-player.speed = .5
-player.dx_decay = .75
-player.w = 20
-player.h = 4
-player.color = 2
 
-ball = {}
-ball.x = 128/2
-ball.y = 128/2
-ball.w = 3
-ball.h = 3
-ball.dx =  1
-ball.dy = 1
-ball.r = 2
-ball.color = 7
-
-blocks = {}
-block_width=15
-block_height=3
-block_colors = {8, 9, 10, 11}
-
-hud_height = 8
 
 function _init()
+  player = {}
+  player.lives = 2
+  player.dx = 0
+  player.dy = 0
+  player.x = 128/2
+  player.y = 120
+  player.speed = .5
+  player.dx_decay = .75
+  player.w = 20
+  player.h = 4
+  player.color = 2
+
+  ball = {}
+  ball.x = 128/2
+  ball.y = 128/2
+  ball.w = 3
+  ball.h = 3
+  ball.dx =  1
+  ball.dy = 1
+  ball.r = 2
+  ball.color = 7
+
+  blocks = {}
+  block_width=15
+  block_height=3
+  block_colors = {8, 9, 10, 11}
+
+  hud_height = 8
+
+  score = 0
+  score_incr = 2
+
+  mode=0  
   create_blocks()
 end
 
 function _update()
-  update_player()
-  update_ball()
+  if mode==0 then
+    update_title()
+  elseif mode==1 then
+    update_game()
+  elseif mode==2 then
+    update_losegame()
+  end
 end
 
 function _draw()
   cls()
   rectfill(0,0,128,128,1)
-  draw_blocks()
-  draw_player()
-  draw_ball()
-  draw_hud()
+  if mode==0 then
+    draw_title()
+  elseif mode==1 then
+    draw_game()
+  elseif mode==2 then
+    draw_losegame()
+  end
 end
 
+function update_game()
+  update_player()
+  update_ball()
+end
+
+function update_title()
+  if btnp(4) then
+    mode+=1
+  end
+end
+
+function update_losegame()
+  if btnp(4) then
+    _init()
+  end
+end
 
 function update_player()
   if btn(0) then
@@ -79,9 +109,13 @@ function update_ball()
   end
 
   if ball.y >=128 then
+    -- player loses a life!
     player.lives -= 1
     ball.y = 128/2
     ball.x = 128/2
+    if player.lives <=0 then
+      mode+=1
+    end
   end
 
   if check_collision(ball, player) then
@@ -94,6 +128,7 @@ function update_ball()
       del(blocks, block)
       -- todo: cool trig stuff
       ball.dy *= -1
+      score+=score_incr
     end
   end
 
@@ -113,6 +148,47 @@ function create_blocks()
       add(blocks, block)
     end
   end
+end
+
+function draw_game()
+  draw_blocks()
+  draw_player()
+  draw_ball()
+  draw_hud()
+end
+
+function draw_title()
+  print("breakout!", 45, 39, 0)
+  print("breakout!", 47, 41, 0)
+  print("breakout!", 45, 40, 0)
+  print("breakout!", 47, 40, 0)
+  print("breakout!", 46, 41, 0)
+  print("breakout!", 46, 39, 0)
+  print("breakout!", 46, 40, 7)
+  print("press z to start", 33, 54, 0)
+  print("press z to start", 35, 56, 0)
+  print("press z to start", 33, 55, 0)
+  print("press z to start", 35, 55, 0)
+  print("press z to start", 34, 54, 0)
+  print("press z to start", 34, 56, 0)
+  print("press z to start", 34, 55, 7)
+end
+
+function draw_losegame()
+  print("you lose!", 45, 39, 0)
+  print("you lose!", 47, 41, 0)
+  print("you lose!", 45, 40, 0)
+  print("you lose!", 47, 40, 0)
+  print("you lose!", 46, 41, 0)
+  print("you lose!", 46, 39, 0)
+  print("you lose!", 46, 40, 7)
+  print("press z to restart", 30, 54, 0)
+  print("press z to restart", 32, 56, 0)
+  print("press z to restart", 30, 55, 0)
+  print("press z to restart", 32, 55, 0)
+  print("press z to restart", 31, 54, 0)
+  print("press z to restart", 31, 56, 0)
+  print("press z to restart", 31, 55, 7)
 end
 
 function draw_blocks()
@@ -149,7 +225,8 @@ end
 
 function draw_hud()
   rect(0,0,127,hud_height,7)
-  print(player.lives, 5,hud_height-6, 7)
+  print("lives: "..player.lives, 90, hud_height-6, 7)
+  print("score: "..score, 5, hud_height-6, 7)
 end
 
 function check_collision(thing1, thing2)
