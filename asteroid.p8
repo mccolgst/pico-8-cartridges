@@ -45,8 +45,8 @@ function update_player()
     player.aim+=player.rotspeed
   end
   if btn(2) then
-    player.dx+=-(sin(player.aim*-1)*player.r)*.01
-    player.dy+=(cos(player.aim*-1)*player.r)*.01
+    player.dx+=-sin(player.aim*-1)*.25
+    player.dy+=cos(player.aim*-1)*.25
   end
 
   player.tip.x = (sin(player.aim)*player.r)+player.x
