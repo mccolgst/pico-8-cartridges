@@ -5,7 +5,7 @@ player = {}
 player.x=60
 player.y=60
 player.aim=.5
-player.r=15
+player.r=5
 player.tip={}
 player.br={}
 player.br.x = 0
@@ -17,26 +17,54 @@ player.tip.x = 0
 player.tip.y = 0
 player.dx=0
 player.dy=0
-player.rotspeed=.015
+player.accel=false
+player.rotspeed=.025
 t=0
+bullet_spd=2
+particle_spd_decay=.03
+particle_colors={7,8,9,10}
+asteroids = {}
+bullets = {}
+particles = {}
+shake=0
 
 function _init()
-
+  create_asteroids()
 end
 
 function _update()
   t+=1
   update_player()
+  update_asteroids()
+  update_bullets()
+  update_particles()
+  camera(shake, shake)
+  if shake>0 then
+    shake-=1
+  end
 end
 
 function _draw()
   cls()
   draw_player()
+  draw_asteroids()
+  draw_bullets()
+  draw_particles()
 end
 
 function update_player()
   if player.aim > 1 then
     player.aim=-1
+  end
+  if player.x<0 then
+    player.x=128
+  elseif player.x>128 then
+    player.x=0
+  end
+  if player.y<0 then
+    player.y=128
+  elseif player.y>128 then
+    player.y=0
   end
   if btn(0) then
     player.aim-=player.rotspeed
@@ -45,8 +73,14 @@ function update_player()
     player.aim+=player.rotspeed
   end
   if btn(2) then
-    player.dx+=-sin(player.aim*-1)*.25
-    player.dy+=cos(player.aim*-1)*.25
+    player.dx+=-sin(player.aim*-1)*.15
+    player.dy+=cos(player.aim*-1)*.15
+    player.accel=true
+  else
+    player.accel=false
+  end
+  if btnp(4) then
+    fire_bullet()
   end
 
   player.tip.x = (sin(player.aim)*player.r)+player.x
@@ -59,14 +93,208 @@ function update_player()
   player.y+=player.dy
 end
 
+function update_asteroids()
+  for asteroid in all(asteroids) do
+    asteroid.x+=asteroid.dx
+    asteroid.y+=asteroid.dy
+    if asteroid.x+asteroid.w < 0 then
+      asteroid.x=128
+    elseif asteroid.x > 128 then
+      asteroid.x=0
+    end
+    if asteroid.y+asteroid.h < 0 then
+      asteroid.y=128
+    elseif asteroid.y > 128 then
+      asteroid.y=0
+    end
+  end
+end
+
+function update_bullets()
+  for bullet in all(bullets) do
+    bullet.x+=bullet.dx
+    bullet.y+=bullet.dy
+    bullet.t-=1
+    if bullet.x<0 then
+      bullet.x=128
+    elseif bullet.x>128 then
+      bullet.x=0
+    end
+    if bullet.y<0 then
+      bullet.y=128
+    elseif bullet.y>128 then
+      bullet.y=0
+    end
+    for asteroid in all(asteroids) do
+      if bullet_collide(bullet, asteroid) then
+        damage_asteroid(asteroid)
+        del(bullets, bullet)
+      end
+    end
+    if bullet.t<=0 then
+      del(bullets, bullet)
+    end
+  end
+end
+
+function update_particles()
+  for particle in all(particles) do
+    particle.x+=particle.dx
+    particle.y+=particle.dy
+    if particle.dx < 0 then
+      particle.dx+=particle_spd_decay
+    else
+      particle.dx-=particle_spd_decay
+    end
+    if particle.dy < 0 then
+      particle.dy+=particle_spd_decay
+    else
+      particle.dy-=particle_spd_decay
+    end
+    if particle.t<=0 then
+      del(particles, particle)
+    end
+    particle.t-=1
+  end
+end
+
+function draw_asteroids()
+  for asteroid in all(asteroids) do
+    rect(asteroid.x, asteroid.y,
+         asteroid.x+asteroid.w, asteroid.y+asteroid.h, 7)
+  end
+end
+
+function draw_bullets()
+  for bullet in all(bullets) do
+    pset(bullet.x, bullet.y, 7)
+  end
+end
+
 function draw_player()
-  circ(player.x, player.y, player.r, 7)
+  --circ(player.x, player.y, player.r, 7)
   line(player.tip.x, player.tip.y, player.br.x, player.br.y, 7)
   line(player.tip.x, player.tip.y, player.bl.x, player.bl.y, 7)
   line(player.bl.x, player.bl.y, player.br.x, player.br.y, 7)
   pset(player.tip.x, player.tip.y, 8)
   pset(player.br.x, player.br.y, 9)
   pset(player.bl.x, player.bl.y, 10)
+  if player.accel then
+    -- draw another flashing triangle behind the ship
+    if t%2==0 then 
+      px = (sin(player.aim-.5)*(player.r+3))+player.x-player.dx
+      py = (cos(player.aim-.5)*(player.r+3))+player.y-player.dy
+      circ(px, py, rnd(2), 7)
+      px = (sin(player.aim-.55)*(player.r+3))+player.x-player.dx
+      py = (cos(player.aim-.55)*(player.r+3))+player.y-player.dy
+      circ(px, py, rnd(2), 7)
+      px = (sin(player.aim-.45)*(player.r+3))+player.x-player.dx
+      py = (cos(player.aim-.45)*(player.r+3))+player.y-player.dy
+      circ(px, py, rnd(2), 7)
+    end
+  end
+end
+
+function draw_particles()
+  for particle in all(particles) do
+    pset(particle.x, particle.y, particle_colors[1+flr(rnd(#particle_colors))])
+  end
+end
+
+function fire_bullet()
+  if #bullets<5 then
+    local bullet = {}
+    bullet.dx=-sin(player.aim*-1)*bullet_spd
+    bullet.dy=cos(player.aim*-1)*bullet_spd
+    bullet.x=player.tip.x
+    bullet.y=player.tip.y
+    bullet.t=30*2
+    add(bullets,bullet)
+  end
+end
+
+function create_asteroid(x,y,w,h,n)
+  for i=0,n do
+    local asteroid = {}
+    local modx=rnd(2)
+    local mody=rnd(2)
+    if flr(rnd(2))==0 then
+      modx=modx*-1
+    end
+    if flr(rnd(2))==0 then
+      mody=mody*-1
+    end
+
+    asteroid.x=x+modx
+    asteroid.y=y+mody
+    asteroid.dx=rnd(1.5)
+    asteroid.dy=rnd(1.5)
+    if flr(rnd(2))==0 then
+      asteroid.dx*=-1
+    end
+    if flr(rnd(2))==0 then
+      asteroid.dy*=-1
+    end
+    asteroid.h=h
+    asteroid.w=w
+    add(asteroids, asteroid)
+  end
+end
+
+function create_asteroids()
+  for i=1,flr(rnd(5))+1 do
+    local asteroid = {}
+    asteroid.x=rnd(128)
+    asteroid.y=rnd(128)
+    asteroid.dx=rnd(1.5)
+    asteroid.dy=rnd(1.5)
+    if flr(rnd(2))==0 then
+      asteroid.dx*=-1
+    end
+    if flr(rnd(2))==0 then
+      asteroid.dy*=-1
+    end
+    asteroid.h=16
+    asteroid.w=16
+    add(asteroids, asteroid)
+  end
+end
+
+function create_particles(x, y)
+  for i=1,flr(rnd(10))+10 do
+    local particle = {}
+    particle.x=x
+    particle.y=y
+    particle.dx=rnd(3.5)
+    particle.dy=rnd(3.5)
+    particle.t=30
+    if flr(rnd(2))==0 then
+      particle.dx*=-1
+    end
+    if flr(rnd(2))==0 then
+      particle.dy*=-1
+    end
+    add(particles, particle)
+  end
+end
+
+function bullet_collide(bullet, asteroid)
+  if bullet.x < asteroid.x+asteroid.w and
+     bullet.x > asteroid.x and
+     bullet.y < asteroid.y+asteroid.h and
+     bullet.y > asteroid.y then
+     return true
+  end
+  return false
+end
+
+function damage_asteroid(asteroid)
+  create_particles(asteroid.x, asteroid.y)
+  if asteroid.w/2>2 then
+    create_asteroid(asteroid.x, asteroid.y, asteroid.w/2, asteroid.h/2, 2)
+  end
+  shake+=1
+  del(asteroids, asteroid)
 end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
