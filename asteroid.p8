@@ -19,6 +19,7 @@ player.dx=0
 player.dy=0
 player.accel=false
 player.rotspeed=.025
+
 t=0
 bullet_spd=2
 particle_spd_decay=.03
@@ -38,7 +39,15 @@ function _update()
   update_asteroids()
   update_bullets()
   update_particles()
-  camera(shake, shake)
+  shakex = shake
+  shakey = shake
+  if flr(rnd(2))==0 then
+    shakex *= -1
+  end
+  if flr(rnd(2))==0 then
+    shakey *= -1
+  end
+  camera(shakex, shakey)
   if shake>0 then
     shake-=1
   end
@@ -82,7 +91,6 @@ function update_player()
   if btnp(4) then
     fire_bullet()
   end
-
   player.tip.x = (sin(player.aim)*player.r)+player.x
   player.tip.y = (cos(player.aim)*player.r)+player.y
   player.br.x = (sin(player.aim+.39)*player.r)+player.x
@@ -91,6 +99,17 @@ function update_player()
   player.bl.y = (cos(player.aim-.39)*player.r)+player.y
   player.x+=player.dx
   player.y+=player.dy
+
+  for asteroid in all(asteroids) do
+    if point_inside(player.tip, asteroid)
+    or point_inside(player.br, asteroid)
+    or point_inside(player.bl, asteroid) then
+      printh("COLLIDE WITH ASTEROID")
+      create_particles(player.x, player.y)
+      damage_asteroid(asteroid)
+      shake+=2
+    end
+  end
 end
 
 function update_asteroids()
@@ -126,7 +145,7 @@ function update_bullets()
       bullet.y=0
     end
     for asteroid in all(asteroids) do
-      if bullet_collide(bullet, asteroid) then
+      if point_inside(bullet, asteroid) then
         damage_asteroid(asteroid)
         del(bullets, bullet)
       end
@@ -167,7 +186,7 @@ end
 
 function draw_bullets()
   for bullet in all(bullets) do
-    pset(bullet.x, bullet.y, 7)
+    circ(bullet.x, bullet.y, 1, 7)
   end
 end
 
@@ -179,6 +198,7 @@ function draw_player()
   pset(player.tip.x, player.tip.y, 8)
   pset(player.br.x, player.br.y, 9)
   pset(player.bl.x, player.bl.y, 10)
+  pset(player.x, player.y, 8)
   if player.accel then
     -- draw another flashing triangle behind the ship
     if t%2==0 then 
@@ -242,7 +262,7 @@ function create_asteroid(x,y,w,h,n)
 end
 
 function create_asteroids()
-  for i=1,flr(rnd(5))+1 do
+  for i=1,flr(rnd(2))+1 do
     local asteroid = {}
     asteroid.x=rnd(128)
     asteroid.y=rnd(128)
@@ -278,11 +298,11 @@ function create_particles(x, y)
   end
 end
 
-function bullet_collide(bullet, asteroid)
-  if bullet.x < asteroid.x+asteroid.w and
-     bullet.x > asteroid.x and
-     bullet.y < asteroid.y+asteroid.h and
-     bullet.y > asteroid.y then
+function point_inside(point, rect)
+  if point.x <= rect.x+rect.w and
+     point.x >= rect.x and
+     point.y <= rect.y+rect.h and
+     point.y >= rect.y then
      return true
   end
   return false
@@ -296,6 +316,19 @@ function damage_asteroid(asteroid)
   shake+=1
   del(asteroids, asteroid)
 end
+
+function check_collision(thing1, thing2)
+  if thing1.x <= thing2.x+thing2.w and
+     thing1.x+thing1.w >= thing2.x and
+     thing1.y+thing1.h >= thing2.y and
+     thing1.y <= thing2.y+thing2.h and
+     thing1.y+thing1.h >= thing2.y then
+     
+    return true
+  end
+  return false
+end
+
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
