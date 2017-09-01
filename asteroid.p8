@@ -25,6 +25,90 @@ bullet_spd=2
 particle_spd_decay=.03
 particle_colors={7,8,9,10}
 asteroids = {}
+asteroid_shapes_big = {
+  {
+    {0,5},
+    {3,0},
+    {5,3},
+    {10,0},
+    {16,5},
+    {12,8},
+    {16,13},
+    {13,16},
+    {5,13},
+    {3,16},
+    {0,14},
+    {0,5},
+  },
+  {
+    {0,5},
+    {5,3},
+    {10,0},
+    {16,5},
+    {12,8},
+    {16,13},
+    {13,16},
+    {3,16},
+    {0,14},
+    {0,5},
+  }
+}
+asteroid_shapes_med = {
+  {
+    {0,5},
+    {3,0},
+    {5,3},
+    {10,0},
+    {16,5},
+    {12,8},
+    {16,13},
+    {13,16},
+    {5,13},
+    {3,16},
+    {0,14},
+    {0,5},
+  },
+  {
+    {0,5},
+    {5,3},
+    {10,0},
+    {16,5},
+    {12,8},
+    {16,13},
+    {13,16},
+    {3,16},
+    {0,14},
+    {0,5},
+  }
+}
+asteroid_shapes_sm = {
+  {
+    {0,5},
+    {3,0},
+    {5,3},
+    {10,0},
+    {16,5},
+    {12,8},
+    {16,13},
+    {13,16},
+    {5,13},
+    {3,16},
+    {0,14},
+    {0,5},
+  },
+  {
+    {0,5},
+    {5,3},
+    {10,0},
+    {16,5},
+    {12,8},
+    {16,13},
+    {13,16},
+    {3,16},
+    {0,14},
+    {0,5},
+  }
+}
 bullets = {}
 particles = {}
 shake=0
@@ -180,7 +264,19 @@ end
 function draw_asteroids()
   for asteroid in all(asteroids) do
     rect(asteroid.x, asteroid.y,
-         asteroid.x+asteroid.w, asteroid.y+asteroid.h, 7)
+         asteroid.x+asteroid.w, asteroid.y+asteroid.h, 8)
+    if asteroid.w == 16 then
+      printh("===================")
+      printh("shape "..asteroid.shape)
+      for point_idx=2,#asteroid_shapes_big[asteroid.shape] do
+        --printh("x:"point[1].." to "..point[2])
+        line(asteroid.x+asteroid_shapes_big[asteroid.shape][point_idx-1][1],
+             asteroid.y+asteroid_shapes_big[asteroid.shape][point_idx-1][2],
+             asteroid.x+asteroid_shapes_big[asteroid.shape][point_idx][1],
+             asteroid.y+asteroid_shapes_big[asteroid.shape][point_idx][2], 7)
+        
+      end
+    end
   end
 end
 
@@ -249,6 +345,7 @@ function create_asteroid(x,y,w,h,n)
     asteroid.y=y+mody
     asteroid.dx=rnd(1.5)
     asteroid.dy=rnd(1.5)
+    asteroid.shape=flr(rnd(#asteroid_shapes_big))+1
     if flr(rnd(2))==0 then
       asteroid.dx*=-1
     end
@@ -268,6 +365,8 @@ function create_asteroids()
     asteroid.y=rnd(128)
     asteroid.dx=rnd(1.5)
     asteroid.dy=rnd(1.5)
+    asteroid.shape=flr(rnd(#asteroid_shapes_big))+1
+
     if flr(rnd(2))==0 then
       asteroid.dx*=-1
     end
