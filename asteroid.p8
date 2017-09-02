@@ -25,90 +25,78 @@ bullet_spd=2
 particle_spd_decay=.03
 particle_colors={7,8,9,10}
 asteroids = {}
-asteroid_shapes_big = {
-  {
-    {0,5},
-    {3,0},
-    {5,3},
-    {10,0},
-    {16,5},
-    {12,8},
-    {16,13},
-    {13,16},
-    {5,13},
-    {3,16},
-    {0,14},
-    {0,5},
+asteroid_shapes = {
+ [16]=
+   {
+    {
+      {0,5},
+      {3,0},
+      {5,3},
+      {10,0},
+      {16,5},
+      {12,8},
+      {16,13},
+      {13,16},
+      {5,13},
+      {3,16},
+      {0,14},
+      {0,5},
+    },
+    {
+      {0,5},
+      {5,3},
+      {10,0},
+      {16,5},
+      {12,8},
+      {16,13},
+      {13,16},
+      {3,16},
+      {0,14},
+      {0,5},
+    }
   },
+  [8]=
   {
-    {0,5},
-    {5,3},
-    {10,0},
-    {16,5},
-    {12,8},
-    {16,13},
-    {13,16},
-    {3,16},
-    {0,14},
-    {0,5},
-  }
-}
-asteroid_shapes_med = {
-  {
-    {0,5},
-    {3,0},
-    {5,3},
-    {10,0},
-    {16,5},
-    {12,8},
-    {16,13},
-    {13,16},
-    {5,13},
-    {3,16},
-    {0,14},
-    {0,5},
+    {
+      {0,3},
+      {3,0},
+      {8,0},
+      {7,5},
+      {8,8},
+      {4,7},
+      {0,8},
+      {0,3},
+    },
+    {
+      {0,3},
+      {3,0},
+      {4,0},
+      {8,3},
+      {8,8},
+      {4,7},
+      {0,8},
+      {0,3},
+    }
   },
+  [4]=
   {
-    {0,5},
-    {5,3},
-    {10,0},
-    {16,5},
-    {12,8},
-    {16,13},
-    {13,16},
-    {3,16},
-    {0,14},
-    {0,5},
-  }
+    {
+      {0,0},
+      {3,1},
+      {4,4},
+      {0,3},
+      {0,0},
+     },
+     {
+      {0,0},
+      {3,0},
+      {4,4},
+      {0,4},
+      {0,0},
+     }
+   }
 }
-asteroid_shapes_sm = {
-  {
-    {0,5},
-    {3,0},
-    {5,3},
-    {10,0},
-    {16,5},
-    {12,8},
-    {16,13},
-    {13,16},
-    {5,13},
-    {3,16},
-    {0,14},
-    {0,5},
-  },
-  {
-    {0,5},
-    {5,3},
-    {10,0},
-    {16,5},
-    {12,8},
-    {16,13},
-    {13,16},
-    {3,16},
-    {0,14},
-    {0,5},
-  }
-}
+
 bullets = {}
 particles = {}
 shake=0
@@ -188,7 +176,6 @@ function update_player()
     if point_inside(player.tip, asteroid)
     or point_inside(player.br, asteroid)
     or point_inside(player.bl, asteroid) then
-      printh("COLLIDE WITH ASTEROID")
       create_particles(player.x, player.y)
       damage_asteroid(asteroid)
       shake+=2
@@ -263,19 +250,14 @@ end
 
 function draw_asteroids()
   for asteroid in all(asteroids) do
-    rect(asteroid.x, asteroid.y,
-         asteroid.x+asteroid.w, asteroid.y+asteroid.h, 8)
-    if asteroid.w == 16 then
-      printh("===================")
-      printh("shape "..asteroid.shape)
-      for point_idx=2,#asteroid_shapes_big[asteroid.shape] do
-        --printh("x:"point[1].." to "..point[2])
-        line(asteroid.x+asteroid_shapes_big[asteroid.shape][point_idx-1][1],
-             asteroid.y+asteroid_shapes_big[asteroid.shape][point_idx-1][2],
-             asteroid.x+asteroid_shapes_big[asteroid.shape][point_idx][1],
-             asteroid.y+asteroid_shapes_big[asteroid.shape][point_idx][2], 7)
-        
-      end
+    --rect(asteroid.x, asteroid.y,
+    --     asteroid.x+asteroid.w, asteroid.y+asteroid.h, 8)
+    for point_idx=2,#asteroid_shapes[asteroid.w][asteroid.shape] do
+      line(asteroid.x+asteroid_shapes[asteroid.w][asteroid.shape][point_idx-1][1],
+           asteroid.y+asteroid_shapes[asteroid.w][asteroid.shape][point_idx-1][2],
+           asteroid.x+asteroid_shapes[asteroid.w][asteroid.shape][point_idx][1],
+           asteroid.y+asteroid_shapes[asteroid.w][asteroid.shape][point_idx][2], 7)
+      
     end
   end
 end
@@ -291,10 +273,10 @@ function draw_player()
   line(player.tip.x, player.tip.y, player.br.x, player.br.y, 7)
   line(player.tip.x, player.tip.y, player.bl.x, player.bl.y, 7)
   line(player.bl.x, player.bl.y, player.br.x, player.br.y, 7)
-  pset(player.tip.x, player.tip.y, 8)
-  pset(player.br.x, player.br.y, 9)
-  pset(player.bl.x, player.bl.y, 10)
-  pset(player.x, player.y, 8)
+  --pset(player.tip.x, player.tip.y, 8)
+  --pset(player.br.x, player.br.y, 9)
+  --pset(player.bl.x, player.bl.y, 10)
+  --pset(player.x, player.y, 8)
   if player.accel then
     -- draw another flashing triangle behind the ship
     if t%2==0 then 
@@ -345,15 +327,17 @@ function create_asteroid(x,y,w,h,n)
     asteroid.y=y+mody
     asteroid.dx=rnd(1.5)
     asteroid.dy=rnd(1.5)
-    asteroid.shape=flr(rnd(#asteroid_shapes_big))+1
+    asteroid.h=h
+    asteroid.w=w
+    asteroid.shape=flr(rnd(#asteroid_shapes[asteroid.w]))+1
+
     if flr(rnd(2))==0 then
       asteroid.dx*=-1
     end
     if flr(rnd(2))==0 then
       asteroid.dy*=-1
     end
-    asteroid.h=h
-    asteroid.w=w
+
     add(asteroids, asteroid)
   end
 end
@@ -365,7 +349,9 @@ function create_asteroids()
     asteroid.y=rnd(128)
     asteroid.dx=rnd(1.5)
     asteroid.dy=rnd(1.5)
-    asteroid.shape=flr(rnd(#asteroid_shapes_big))+1
+    asteroid.h=16
+    asteroid.w=16
+    asteroid.shape=flr(rnd(#asteroid_shapes[asteroid.w]))+1
 
     if flr(rnd(2))==0 then
       asteroid.dx*=-1
@@ -373,8 +359,7 @@ function create_asteroids()
     if flr(rnd(2))==0 then
       asteroid.dy*=-1
     end
-    asteroid.h=16
-    asteroid.w=16
+
     add(asteroids, asteroid)
   end
 end
