@@ -15,13 +15,24 @@ player.bl.x = 0
 player.bl.y = 0
 player.tip.x = 0
 player.tip.y = 0
+player.hp=3
+player.total_hp=3
 player.dx=0
 player.dy=0
 player.accel=false
+player.invuln=false
 player.rotspeed=.025
+player.respawn_timer=0
 
 t=0
-bullet_spd=2
+title_step=30
+title_show=true
+level=1
+mode=0
+bullet_spd=3
+score=0
+score_x=5
+score_y=5
 particle_spd_decay=.03
 particle_colors={7,8,9,10}
 asteroids = {}
@@ -29,70 +40,40 @@ asteroid_shapes = {
  [16]=
    {
     {
-      {0,5},
-      {3,0},
-      {5,3},
-      {10,0},
-      {16,5},
-      {12,8},
-      {16,13},
-      {13,16},
-      {5,13},
-      {3,16},
-      {0,14},
-      {0,5},
+      {0,5},{3,0},{5,3},
+      {10,0},{16,5},{12,8},
+      {16,13},{13,16},{5,13},
+      {3,16},{0,14},{0,5},
     },
     {
-      {0,5},
-      {5,3},
-      {10,0},
-      {16,5},
-      {12,8},
-      {16,13},
-      {13,16},
-      {3,16},
-      {0,14},
+      {0,5},{5,3},{10,0},
+      {16,5},{12,8},{16,13},
+      {13,16},{3,16},{0,14},
       {0,5},
     }
   },
   [8]=
   {
     {
-      {0,3},
-      {3,0},
-      {8,0},
-      {7,5},
-      {8,8},
-      {4,7},
-      {0,8},
-      {0,3},
+      {0,3},{3,0},{8,0},
+      {7,5},{8,8},{4,7},
+      {0,8},{0,3},
     },
     {
-      {0,3},
-      {3,0},
-      {4,0},
-      {8,3},
-      {8,8},
-      {4,7},
-      {0,8},
-      {0,3},
+      {0,3},{3,0},{4,0},
+      {8,3},{8,8},{4,7},
+      {0,8},{0,3},
     }
   },
   [4]=
   {
     {
-      {0,0},
-      {3,1},
-      {4,4},
-      {0,3},
-      {0,0},
+      {0,0},{3,1},{4,4},
+      {0,3},{0,0},
      },
      {
-      {0,0},
-      {3,0},
-      {4,4},
-      {0,4},
-      {0,0},
+      {0,0},{3,0},{4,4},
+      {0,4},{0,0},
      }
    }
 }
@@ -106,63 +87,67 @@ function _init()
 end
 
 function _update()
-  t+=1
-  update_player()
-  update_asteroids()
-  update_bullets()
-  update_particles()
-  shakex = shake
-  shakey = shake
-  if flr(rnd(2))==0 then
-    shakex *= -1
-  end
-  if flr(rnd(2))==0 then
-    shakey *= -1
-  end
-  camera(shakex, shakey)
-  if shake>0 then
-    shake-=1
+
+  if mode == 0 then
+    t=(t+1)%title_step
+    if t==0 then
+      if title_show then
+        title_show = false
+      else
+        title_show = true
+      end
+    end
+    update_asteroids()
+    if btnp(4) then
+      mode += 1
+      asteroids = {}
+      create_asteroids()
+    end
+  elseif mode == 1 then 
+    t+=1
+    update_player()
+    update_asteroids()
+    update_bullets()
+    update_particles()
+    if is_level_completed() then
+      level+=1
+      create_asteroids()
+    end
+    shakex = shake
+    shakey = shake
+    if flr(rnd(2))==0 then
+      shakex *= -1
+    end
+    if flr(rnd(2))==0 then
+      shakey *= -1
+    end
+    camera(shakex, shakey)
+    if shake>0 then
+      shake-=1
+    end
+  elseif mode == 2 then
   end
 end
 
 function _draw()
   cls()
-  draw_player()
-  draw_asteroids()
-  draw_bullets()
-  draw_particles()
+  rect(0,0,127,127,7)
+  if mode == 0 then
+    draw_asteroids()
+    draw_title()
+  elseif mode == 1 then
+    --rect(40, 40, 80, 80, 7)
+    draw_player()
+    draw_asteroids()
+    draw_bullets()
+    draw_particles()
+    draw_hud()
+  end
+
 end
 
 function update_player()
-  if player.aim > 1 then
-    player.aim=-1
-  end
-  if player.x<0 then
-    player.x=128
-  elseif player.x>128 then
-    player.x=0
-  end
-  if player.y<0 then
-    player.y=128
-  elseif player.y>128 then
-    player.y=0
-  end
-  if btn(0) then
-    player.aim-=player.rotspeed
-  end
-  if btn(1) then
-    player.aim+=player.rotspeed
-  end
-  if btn(2) then
-    player.dx+=-sin(player.aim*-1)*.15
-    player.dy+=cos(player.aim*-1)*.15
-    player.accel=true
-  else
-    player.accel=false
-  end
-  if btnp(4) then
-    fire_bullet()
-  end
+
   player.tip.x = (sin(player.aim)*player.r)+player.x
   player.tip.y = (cos(player.aim)*player.r)+player.y
   player.br.x = (sin(player.aim+.39)*player.r)+player.x
@@ -172,13 +157,68 @@ function update_player()
   player.x+=player.dx
   player.y+=player.dy
 
-  for asteroid in all(asteroids) do
-    if point_inside(player.tip, asteroid)
-    or point_inside(player.br, asteroid)
-    or point_inside(player.bl, asteroid) then
-      create_particles(player.x, player.y)
-      damage_asteroid(asteroid)
-      shake+=2
+  if player.invuln==false then
+    if player.aim > 1 then
+      player.aim=-1
+    end
+    if player.x<0 then
+      player.x=128
+    elseif player.x>128 then
+      player.x=0
+    end
+    if player.y<0 then
+      player.y=128
+    elseif player.y>128 then
+      player.y=0
+    end
+    if btn(0) then
+      player.aim-=player.rotspeed
+    end
+    if btn(1) then
+      player.aim+=player.rotspeed
+    end
+    if btn(2) then
+      player.dx+=-sin(player.aim*-1)*.15
+      player.dy+=cos(player.aim*-1)*.15
+      player.accel=true
+    else
+      player.accel=false
+    end
+    if btnp(4) then
+      fire_bullet()
+    end
+
+    for asteroid in all(asteroids) do
+      if point_inside(player.tip, asteroid)
+      or point_inside(player.br, asteroid)
+      or point_inside(player.bl, asteroid) then
+        create_particles(player.x, player.y)
+        damage_asteroid(asteroid)
+        shake+=2
+        player.hp-=1
+        player.dx=0
+        player.dy=0
+        player.x=60
+        player.y=60
+        player.aim=.5
+        player.invuln=true
+        player.accel=false
+        player.respawn_timer=30*2
+      end
+    end
+  end
+
+  if player.invuln then
+    player.respawn_timer-=1
+    local respawn = true
+    for asteroid in all(asteroids) do
+      if check_collision({x=40, y=40,
+                          w=40, h=40}, asteroid) then
+        respawn = false
+      end
+    end
+    if respawn and player.respawn_timer<=0 then
+      player.invuln=false
     end
   end
 end
@@ -204,6 +244,8 @@ function update_bullets()
   for bullet in all(bullets) do
     bullet.x+=bullet.dx
     bullet.y+=bullet.dy
+    bullet.w=2
+    bullet.h=2
     bullet.t-=1
     if bullet.x<0 then
       bullet.x=128
@@ -216,8 +258,12 @@ function update_bullets()
       bullet.y=0
     end
     for asteroid in all(asteroids) do
-      if point_inside(bullet, asteroid) then
+      if check_collision({x=bullet.x-bullet.w,
+                          y=bullet.y-bullet.h,
+                          w=bullet.w,
+                          h=bullet.h}, asteroid) then
         damage_asteroid(asteroid)
+        score+=asteroid.w
         del(bullets, bullet)
       end
     end
@@ -257,26 +303,33 @@ function draw_asteroids()
            asteroid.y+asteroid_shapes[asteroid.w][asteroid.shape][point_idx-1][2],
            asteroid.x+asteroid_shapes[asteroid.w][asteroid.shape][point_idx][1],
            asteroid.y+asteroid_shapes[asteroid.w][asteroid.shape][point_idx][2], 7)
-      
     end
   end
 end
 
 function draw_bullets()
   for bullet in all(bullets) do
-    circ(bullet.x, bullet.y, 1, 7)
+    circfill(bullet.x, bullet.y, 1, 7)
   end
 end
 
 function draw_player()
   --circ(player.x, player.y, player.r, 7)
-  line(player.tip.x, player.tip.y, player.br.x, player.br.y, 7)
-  line(player.tip.x, player.tip.y, player.bl.x, player.bl.y, 7)
-  line(player.bl.x, player.bl.y, player.br.x, player.br.y, 7)
-  --pset(player.tip.x, player.tip.y, 8)
-  --pset(player.br.x, player.br.y, 9)
-  --pset(player.bl.x, player.bl.y, 10)
-  --pset(player.x, player.y, 8)
+  if player.invuln then
+    player.color = 14
+  else
+    player.color = 7
+  end
+  line(player.tip.x, player.tip.y, player.br.x, player.br.y, player.color)
+  line(player.tip.x, player.tip.y, player.bl.x, player.bl.y, player.color)
+  line(player.bl.x, player.bl.y, player.br.x, player.br.y, player.color)
+  if player.invuln and t%5==0 then
+    -- flashing effect when invulnerable
+    line(player.tip.x, player.tip.y, player.br.x, player.br.y, 0)
+    line(player.tip.x, player.tip.y, player.bl.x, player.bl.y, 0)
+    line(player.bl.x, player.bl.y, player.br.x, player.br.y, 0)
+  end
+
   if player.accel then
     -- draw another flashing triangle behind the ship
     if t%2==0 then 
@@ -297,6 +350,48 @@ function draw_particles()
   for particle in all(particles) do
     pset(particle.x, particle.y, particle_colors[1+flr(rnd(#particle_colors))])
   end
+end
+
+function draw_title()
+  if title_show then
+    print("press x 1 play", 35, 81, 7)
+    print("press x 1 play", 35, 79, 7)
+
+    print("press x 1 play", 36, 81, 7)
+    print("press x 1 play", 36, 80, 7)
+    print("press x 1 play", 36, 79, 7)
+
+    print("press x 1 play", 34, 80, 7)
+    print("press x 1 play", 34, 81, 7)
+    print("press x 1 play", 34, 79, 7)
+
+    print("press x 1 play", 35, 80, 0)
+
+  end
+end
+
+function draw_hud()
+  print(score, score_x, score_y+1, 7)
+  print(score, score_x, score_y-1, 7)
+
+  print(score, score_x+1, score_y-1, 7)
+  print(score, score_x+1, score_y, 7)
+  print(score, score_x+1, score_y+1, 7)
+
+  print(score, score_x-1, score_y-1, 7)
+  print(score, score_x-1, score_y, 7)
+  print(score, score_x-1, score_y+1, 7)
+
+  print(score, score_x, score_y, 0)
+
+  -- health
+  for i=1,player.total_hp do
+    spr(2, 9*i-5, 12)
+  end
+  for i=1,player.hp do
+    spr(1, 9*i-5, 12)
+  end
+  
 end
 
 function fire_bullet()
@@ -322,7 +417,6 @@ function create_asteroid(x,y,w,h,n)
     if flr(rnd(2))==0 then
       mody=mody*-1
     end
-
     asteroid.x=x+modx
     asteroid.y=y+mody
     asteroid.dx=rnd(1.5)
@@ -343,7 +437,7 @@ function create_asteroid(x,y,w,h,n)
 end
 
 function create_asteroids()
-  for i=1,flr(rnd(2))+1 do
+  for i=1,flr(rnd(level))+1 do
     local asteroid = {}
     asteroid.x=rnd(128)
     asteroid.y=rnd(128)
@@ -352,6 +446,11 @@ function create_asteroids()
     asteroid.h=16
     asteroid.w=16
     asteroid.shape=flr(rnd(#asteroid_shapes[asteroid.w]))+1
+
+    while check_collision({x=player.x-30, y=player.y-30, w=70, h=70}, asteroid) do
+      asteroid.x=rnd(128)
+      asteroid.y=rnd(128)
+    end
 
     if flr(rnd(2))==0 then
       asteroid.dx*=-1
@@ -395,7 +494,7 @@ end
 function damage_asteroid(asteroid)
   create_particles(asteroid.x, asteroid.y)
   if asteroid.w/2>2 then
-    create_asteroid(asteroid.x, asteroid.y, asteroid.w/2, asteroid.h/2, 2)
+    create_asteroid(asteroid.x, asteroid.y, asteroid.w/2, asteroid.h/2, flr(rnd(1))+1)
   end
   shake+=1
   del(asteroids, asteroid)
@@ -413,15 +512,18 @@ function check_collision(thing1, thing2)
   return false
 end
 
+function is_level_completed()
+  return #asteroids == 0 and #bullets == 0
+end
 __gfx__
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000077007700770077000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000788778877007700700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700788888877000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000788888877000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00077000788888877000000700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00700700078888700700007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000007887000070070000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000770000007700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
