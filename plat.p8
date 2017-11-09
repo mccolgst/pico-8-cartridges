@@ -73,7 +73,7 @@ end
 
 function _update()
   if mode == 0 then
-    t+=1
+    t+=0.5
     if btnp(4) then
       mode+=1
     end
@@ -134,7 +134,7 @@ function _draw()
     end    
     pal()
     spr(player.sprites[player.frame+1], player.x*8-4, player.y*8-8, 1, 1, player.flipx)
-    
+
     draw_fx()
     draw_checkpoints()
     draw_tokens()
@@ -155,15 +155,6 @@ function _draw()
     spr(8, boo.x+1, boo.y+1)
     pal()
     spr(8, boo.x, boo.y)
-
-    --rectfill(camera_pos.x*8,camera_pos.y*8, camera_pos.x*8+40, camera_pos.y*8+16, 1)
-
-    --tutorial
-    --pretty_print("<- checkpoint", 75, 90, 7)
-    --pretty_print("x use checkpoint", 0, 130, 7)
-    --pretty_print("+score ->", 10, 128+45, 7)
-
-    --pretty_print("^ ouch", 95, 128+35, 7)
 
     pretty_print("l or r", 0, 128+10, 7)
     pretty_print("wall", 0, 128+20, 7)
@@ -312,22 +303,21 @@ function update_player()
 
     end  
   else
-    if(not (is_solid(player.x-0.2, player.y+sgn(player.dy)*0.3) or
-            is_solid(player.x+0.2, player.y+sgn(player.dy)*0.3))) then
+    -- going down
+    if(not (is_solid(player.x-0.2, player.y+0.3) or
+            is_solid(player.x+0.2, player.y+0.3))) then
       player.y+=player.dy
     else
         while (not (
           is_solid(player.x-0.2,player.y) or
           is_solid(player.x+0.2,player.y)
         ))
-      do player.y =player.y + 0.05 end
+      do player.y =player.y + 0.01 end
     end
   end
 
   -- check checkpoint collision
   for checkpoint in all(checkpoints) do
-    --rect(player.x*8-4, player.y*8-8, player.x*8+4, player.y*8, 8)
-
     if not checkpoint.active and check_collision({x=player.x*8-4, y=player.y*8-8, w=8, h=8},
                        checkpoint) then
       for cx in all(checkpoints) do
@@ -425,10 +415,7 @@ end
 function update_camera()
   -- camera position x
   if player.x > camera_pos.x+16 and camera_pos.dx==0 then
-    --printh("player.x "..player.x.." camera_posx "..camera_pos.x.." camera.newx "..camera_pos.newx)
     while flr(player.x/16) > camera_pos.newx / 16 do
-      --printh("player.x "..player.x.." camera_posnewx "..camera_pos.newx)
-
       camera_pos.newx+=16
     end
     camera_pos.dx=camera_speed
@@ -468,27 +455,7 @@ function update_camera()
   camera(camera_pos.x*8, camera_pos.y*8)
 end
 
-function player_can_move(newx, newy)
-  cell = get_cell(newx, newy)
-  if is_solid(cell.x, cell.y) then
-    return false
-  end
-  return true
-end
-
-function get_cell(px, py)
-  local celx
-  local cely
-  celx = px/8
-  cely = py/8
-  
-  -- todo, might need to 
-  -- factor in lvl here
-  return {x=celx, y=cely}
-end
-
 function is_solid(celx, cely)
-  --printh("is_solid celx "..celx.." cely "..cely)
   return fget(mget(celx, cely)) == 1
 end
 
@@ -1062,7 +1029,7 @@ __map__
 0207070207070703070000020700000700000002000000000000000202050502020505070505070505070505070505020200000707070725070703070707131300000002020202020202020205050202000000020000000200000002000300130000000205050707070707020500001300000007070700000007070700000002
 0202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202020202050505020505050205050502020202020202020202020202020202020202020202020202020202020202020202020202
 __sfx__
-010200000c0310e031100311103113031150311703100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001000010000100001
+010200000c0350e035100351103513035150351703500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005
 010200000c6100c6100c6100c6100c6100c6100c6100c610000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 010400000c53018530245303053024530185300c53000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500005000050000500
 010300003b3312d331133311d631106310e6310c63100301003010030100301003010030100301003010030100301003010030100301003010030100301003010030100301003010030100301003010030100301
