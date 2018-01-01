@@ -1,11 +1,124 @@
 pico-8 cartridge // http://www.pico-8.com
 version 15
 __lua__
-plx_layers = {}
-stars = {}
-stars_colors = {7,6}
 
 function _init()
+ mode=1
+ driving_init()
+ player_sel_init()
+end
+
+function _update()
+ 
+ if mode==0 then
+   driving_update()
+ elseif mode==1 then
+   player_sel_update()
+ end
+end
+
+function _draw()
+  cls()
+  if mode==0 then
+    driving_draw()
+  elseif mode==1 then
+    player_sel_draw()
+  end
+end
+
+
+
+-->8
+-- start with one player
+-- add selectable players later
+-- which can add modifiers to gameplay
+-- make it so there are >1 players later?
+
+function player_sel_init()
+ players = {}
+ player_inv = {
+   {name="gas",total=0,cost=20},
+   {name="food",total=0,cost=2}
+ }
+ player_money = 40
+ store_money = 200
+ index = 1
+ index_y = 28
+ store_inv = {
+   {name="gas",total=10,cost=20},
+   {name="food",total=100,cost=2}
+ }
+end
+
+function player_sel_update()
+  if btnp(2) and index > 1 then
+    index-=1
+  elseif btnp(3) and index < #store_inv then
+    index+=1
+  end
+  if btnp(5) then
+    player_money,
+    store_money,
+    player_inv,
+    store_inv = xchange_item(index,
+    player_money,
+    store_money,
+    player_inv,
+    store_inv)
+  elseif btnp(4) then
+    store_money,
+    player_money,
+    store_inv,
+    player_inv = xchange_item(index,
+    store_money,
+    player_money,
+    store_inv,
+    player_inv)
+  end
+  --if index_y < 28 + (index-1*8)  then
+  --  index_y+=1
+  --end
+end
+
+function player_sel_draw()
+  print("money: $"..player_money,10,10,7)
+  for i=1,#store_inv do
+    if i==index then
+      --rectfill(0,index_y,128,index_y+8,5)
+      rectfill(0,(i*10)+18,128,(i*10)+18+8,5)
+    end
+    print(store_inv[i].name,10,i*10+20,7)
+    print("$"..store_inv[i].cost,30,i*10+20,7)
+    print("stock:"..store_inv[i].total,50,i*10+20,7)
+  end
+  
+  print("z/x",10,128-10,7)
+end
+
+function xchange_item(index,
+																						buyer_money,
+																						seller_money,
+																						buyer_inv,
+																						seller_inv)
+  if buyer_money >= seller_inv[index].cost
+     and seller_inv[index].total>=1 then
+    buyer_money-=seller_inv[index].cost
+    seller_money+=buyer_inv[index].cost
+    buyer_inv[index].total+=1
+    seller_inv[index].total-=1  
+  end
+  return buyer_money,
+         seller_money,
+         buyer_inv,
+         seller_inv
+end
+
+-->8
+function driving_init()
+  plx_layers = {}
+  stars = {}
+  stars_colors = {7,6}
+
   car = {}
   car.x=70
   car.y=80
@@ -34,7 +147,7 @@ function _init()
   end
 end
 
-function _update()
+function driving_update()
   t+=0.01
   car.t=(car.t+1)%car.ant_step
   if (car.t==0) then
@@ -45,21 +158,23 @@ function _update()
   end
   foreach(car.dust.particles, update_dust_particle)
   foreach(plx_layers,update_plx)
+
 end
 
-function _draw()
-  cls()
+function driving_draw()
   
+  -- draw ground
   rectfill(0,77,128,128,1)
     
   for star in all(stars) do
    pset(star.x, star.y, star.c)
   end
   
+  -- draw moon
   circfill(35,35,10,6)
   circfill(37,35,10,7)
 
-  
+  -- draw parralax scrollers
   foreach(plx_layers,draw_plx)
 
   rect(0,0,127,127,7)
@@ -68,6 +183,7 @@ function _draw()
   draw_car()
   pal()
 end
+
 
 function draw_car()
   for i=1,#car.sprs.top do
@@ -171,8 +287,6 @@ function draw_dust_particle(part)
   circfill(part.x,part.y,
            part.r,part.c)
 end
-
-
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
