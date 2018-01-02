@@ -3,7 +3,7 @@ version 15
 __lua__
 
 function _init()
- mode=1
+ mode=0
  driving_init()
  player_sel_init()
 end
@@ -37,16 +37,25 @@ end
 function player_sel_init()
  players = {}
  player_inv = {
-   {name="gas",total=0,cost=20},
-   {name="food",total=0,cost=2}
+   {name="gas",total=98,cost=20},
+   {name="food",total=1234,cost=2},
+   {name="tires",total=0,cost=40}
+
  }
- player_money = 40
+ player = {
+   health=100,
+   max_health=100,
+   money=100,
+
+ }
+
  store_money = 200
  index = 1
  index_y = 28
  store_inv = {
    {name="gas",total=10,cost=20},
-   {name="food",total=100,cost=2}
+   {name="food",total=100,cost=2},
+   {name="tires",total=4,cost=40}
  }
 end
 
@@ -57,21 +66,21 @@ function player_sel_update()
     index+=1
   end
   if btnp(5) then
-    player_money,
+    player.money,
     store_money,
     player_inv,
     store_inv = xchange_item(index,
-    player_money,
+    player.money,
     store_money,
     player_inv,
     store_inv)
   elseif btnp(4) then
     store_money,
-    player_money,
+    player.money,
     store_inv,
     player_inv = xchange_item(index,
     store_money,
-    player_money,
+    player.money,
     store_inv,
     player_inv)
   end
@@ -81,25 +90,33 @@ function player_sel_update()
 end
 
 function player_sel_draw()
-  print("money: $"..player_money,10,10,7)
+  print("store inventory:", 10,10,7)
   for i=1,#store_inv do
     if i==index then
-      --rectfill(0,index_y,128,index_y+8,5)
       rectfill(0,(i*10)+18,128,(i*10)+18+8,5)
     end
     print(store_inv[i].name,10,i*10+20,7)
     print("$"..store_inv[i].cost,30,i*10+20,7)
     print("stock:"..store_inv[i].total,50,i*10+20,7)
+
   end
-  
-  print("z/x",10,128-10,7)
+  print("your inventory:",10,70,7)
+  print("money: $"..player.money,10,80,7)
+
+  for i=1,#player_inv do
+    print(player_inv[i].name,10,i*10+80,7)
+    print("stock:"..player_inv[i].total,50,i*10+80,7)
+
+  end
+
+  print("arrows + z/x",128-45,128-10,7)
 end
 
 function xchange_item(index,
-																						buyer_money,
-																						seller_money,
-																						buyer_inv,
-																						seller_inv)
+				            	buyer_money,
+				            	seller_money,
+				            	buyer_inv,
+				            	seller_inv)
   if buyer_money >= seller_inv[index].cost
      and seller_inv[index].total>=1 then
     buyer_money-=seller_inv[index].cost
@@ -118,10 +135,10 @@ function driving_init()
   plx_layers = {}
   stars = {}
   stars_colors = {7,6}
-
+  driving = true
   car = {}
   car.x=70
-  car.y=80
+  car.y=70
   car.sprs = {}
   car.sprs.top = {1,2,3,4}
   car.sprs.bot = {17,18,19,20}
@@ -133,15 +150,21 @@ function driving_init()
   car.dust = {}
   car.dust.colors = {13,6,7}
   car.dust.particles = {}
+  car.health=45
+  car.max_health=100
+  car.driving_time = 0
+
+  next_checkpoint = 200
+  car.total_distance = 4
   t=0
-  create_plx_layer(0,70,16,1,-.25,64,2)  
-  create_plx_layer(0,72,16,1,-.5,80,13)
+  create_plx_layer(0,60,16,1,-.25,64,2)  
+  create_plx_layer(0,62,16,1,-.5,80,13)
 
   for i=0,flr(rnd(15)) do
     local star = {}
     star.x=rnd(128)
-    star.y=rnd(75)
-    star.r=flr(rnd(1))+1
+    star.y=rnd(65)
+    star.r=1
     star.c=stars_colors[flr(rnd(#stars_colors))+1]
     add(stars,star)
   end
@@ -158,32 +181,98 @@ function driving_update()
   end
   foreach(car.dust.particles, update_dust_particle)
   foreach(plx_layers,update_plx)
+  if driving == true then
+    car.driving_time+=1
+    if car.driving_time%(30*1)==0 then
+      car.health-=1
+      next_checkpoint-=1
+      car.total_distance+=1
+      player_inv[1].total-=1
+      player_inv[2].total-=10
+    end
+  end
 
 end
 
 function driving_draw()
   
   -- draw ground
-  rectfill(0,77,128,128,1)
+  rectfill(0,67,128,128,1)
     
   for star in all(stars) do
    pset(star.x, star.y, star.c)
   end
   
   -- draw moon
-  circfill(35,35,10,6)
-  circfill(37,35,10,7)
+  circfill(25,25,10,6)
+  circfill(27,25,10,7)
 
   -- draw parralax scrollers
   foreach(plx_layers,draw_plx)
 
   rect(0,0,127,127,7)
 
+  --
+  draw_hud()
+
   pal(13,5)
   draw_car()
   pal()
 end
 
+function draw_hud()
+  rectfill(0,89,128,128,7)
+  rectfill(1,90,126,126,5)
+  print("vehicle:", 5, 94, 6)
+  draw_bar(car.health, car.max_health, 35, 6, 40, 93)
+  print("health:", 5, 102, 6)
+  draw_bar(player.health, player.max_health, 35, 6, 40, 93+8)
+
+  print("gas: ",5,110,6)
+  print(player_inv[1].total.."l",
+        69-offset_x(player_inv[1].total),
+        110, 6)
+  print("food: ", 5, 118, 6)
+  
+  
+  print(player_inv[2].total.."kg",
+        65-offset_x(player_inv[2].total),
+        118, 6)
+
+
+  print("next chkpnt", 80, 94, 6)
+  print(next_checkpoint.."km",
+        115-offset_x(next_checkpoint), 102, 6)
+  print("total: ", 80, 110, 6)
+  print(car.total_distance.."km",
+        115-offset_x(car.total_distance), 118, 6)
+
+end
+
+function draw_bar(val,max,len,height,x,y)
+  local color = 3
+  --background of bar
+  rectfill(x, y, x+len, y+height,6)
+  -- progress bar
+  local progress = (val / max) * len
+  if val / max <= .5 then
+    color = 9
+  elseif val / max <= .25 then
+    color = 8
+  end
+  rectfill(x+1, y+1, x+progress-1, y+height-1, color)
+end
+
+function offset_x(number)
+  -- calc modx to move score according to # of digits
+  local digits=number
+  local modx=0
+  while flr(digits/10) > 0 do
+    modx+=4
+    digits=flr(digits/10)
+  end
+  return modx
+end
 
 function draw_car()
   for i=1,#car.sprs.top do
@@ -323,10 +412,10 @@ __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000dddd0000000000000000000000000000000000000000000000000000000000000000000000000000dddd000000000000000000000000000000000000000
-0000dddddddd0000000000000dd000000000000000000000000dd0000000000000000000000000000000ddddddd0000000000000000dd0000000000000000000
-0dddddddddddd000000000dddddd0dd0000000dd000000dd00dddddd000000dd000000dd000000dd0ddddddddddd0dd0000000dd00dddddd000000dd000000d0
+000000000ddd00000000000000000000000000000000000000000000000d000000000000000000000000000000000000000000000000000000ddd00000000000
+00000dddddddd00000000000000dd000000000dd0000000000000000000dd00000000000000d000000000dddd0000000000000000000000000dddd0000000000
+0000dddddddddd00000000000ddddd0000000ddd00000000000dd000000dddd00000000000dd00000000ddddddd0000000000000000dd0000dddddd000000000
+0ddddddddddddd00000000ddddddddd000000ddd000000dd00dddddd00dddddd000000dd0dddd0dd0ddddddddddd0dd0000000dd00dddddd0ddddddd000000d0
 dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
