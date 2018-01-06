@@ -1,11 +1,13 @@
 pico-8 cartridge // http://www.pico-8.com
 version 15
 __lua__
+player = {}
 
 function _init()
- mode=0
+ mode=2
  driving_init()
  player_sel_init()
+ scavenge_init()
 end
 
 function _update()
@@ -14,6 +16,8 @@ function _update()
    driving_update()
  elseif mode==1 then
    player_sel_update()
+ elseif mode==2 then
+ 	 scavenge_update()
  end
 end
 
@@ -23,6 +27,8 @@ function _draw()
     driving_draw()
   elseif mode==1 then
     player_sel_draw()
+  elseif mode==2 then
+    scavenge_draw()
   end
 end
 
@@ -376,38 +382,493 @@ function draw_dust_particle(part)
   circfill(part.x,part.y,
            part.r,part.c)
 end
+-->8
+-- scavenging stage
+
+function scavenge_init()
+  player.x = 128/2
+  player.y = 128/2
+  player.w = 8
+  player.h = 8
+  player.frame = 1
+  player.dx = 0
+  player.dy = 0
+  player.v = .25
+  player.f = false
+  player.t = 0
+  player.aiming = false
+  player.aimer = {}
+  player.aimer.x = player.x + 4
+  player.aimer.y = player.y + 4
+  player.bullets = {}
+  player.bullet_speed = 2
+  player.max_speed = 1.5
+  player.sprites = {37, 32, 33, 34, 35, 36}
+  player.step = 3
+  player.batteries = 0
+  player.health=100
+  player.max_health=100
+  player.money=100
+  enemy_speed = .5
+  power = 50
+  spaceship = {}
+  spaceship.x = 20
+  spaceship.y = 80
+  spaceship.s = 24
+  spaceship.w = 16
+  spaceship.h = 16
+  enemies = {}
+  screen_xwidth = 300
+  player.x = 128/2
+  player.y = 128/2
+  cam = {}
+  cam.x = 0
+  power = 50
+  cam.speed = .5
+  cam.dx = 0
+  batteries = {
+    {x=160,y=60, w=8, h=8, s=2},
+    {x=180,y=40, w=8, h=8, s=2},
+  }
+  rocks = {}
+  rock_sprite = 9
+  create_rocks()
+  create_enemy()
+	 t=0
+		shake = false
+		shake_duration=30*.25 -- half second
+		shake_timer = 0
+end
+
+function scavenge_update()
+  t+=1
+  if t%30==0 then power-=1 end
+  player_update()
+  update_enemies()
+  if player.x>60 and player.x < screen_xwidth then
+    cam.x=player.x-60
+  end
+
+  camera(cam.x,0)
+
+  if shake and shake_timer > t then
+    local shakex = rnd(5)
+    local shakey = rnd(5)
+    if flr(rnd(2)) == 0 then
+      shakex = - shakex
+    end
+    if flr(rnd(2)) == 0 then
+      shakey = - shakey
+    end
+    camera(cam.x+shakex, 0+shakey)
+  else
+    shake = false
+  end
+end
+
+function scavenge_draw()
+
+  cls()
+  --palt(0, false)
+  rectfill(cam.x,0,cam.x+128,128,13)
+  rectfill(cam.x,0,cam.x+128,40,0)
+  circfill(cam.x+20+1,20,9,6)
+  circfill(cam.x+20+0,20,9,6)
+  circfill(cam.x+20,20,8,7)
+
+  spr(spaceship.s,
+        spaceship.x,
+        spaceship.y,
+        spaceship.w/8,
+        spaceship.h/8)
+  for rock in all(rocks) do
+    spr(rock_sprite, rock.x, rock.y)
+  end
+  draw_player()
+  draw_enemies()
+
+  for battery in all(batteries) do
+    pal(5, 7)
+    spr(battery.s, battery.x-1, battery.y)
+    spr(battery.s, battery.x+1, battery.y)
+    spr(battery.s, battery.x, battery.y+1)
+    spr(battery.s, battery.x, battery.y-1)
+    pal()
+    spr(battery.s, battery.x, battery.y)
+    
+  end
+  draw_scavenge_ui()
+
+end
+
+function player_update()
+  player.aimer.x = player.x+4
+  player.aimer.y = player.y+4
+  if btn(0) then 
+    player.dx-=player.v
+    player.f = true
+  end
+  if btn(1) then
+    player.dx+=player.v
+    player.f = false
+  end
+  if btn(2) then player.dy-=player.v end
+  if btn(3) then player.dy+=player.v end
+  if btn(4) then 
+    -- enter fire phase
+    player.aiming = true
+  end
+  if not btn(0) and not btn(1) then
+    if player.dx < 0 then
+      player.dx += player.v
+    else
+      player.dx -= player.v
+    end
+    if abs(player.dx) < 1 then
+      player.dx = 0
+    end
+  end
+  if not btn(2) and not btn(3) then
+    if player.dy < 0 then
+      player.dy += player.v
+    else
+      player.dy -= player.v
+    end
+    if abs(player.dy) < 1 then
+      player.dy = 0
+    end
+  end
+  if player.aiming then
+    player.dx=0
+    player.dy=0
+    if btn(0) then 
+      player.aimer.x=player.x+4-15
+      player.f = true
+    end
+    if btn(1) then
+      player.aimer.x=player.x+4+15
+      player.f = false
+    end
+    if btn(2) then player.aimer.y=player.y+4-15 end
+    if btn(3) then player.aimer.y=player.y+4+15 end
+    if not btn(4) then
+      -- fire!!!!!
+      player_fire(btn(0), btn(1), btn(2), btn(3))
+      player.aiming = false
+    end
+  end
+  for bullet in all(player.bullets) do
+    bullet.x += bullet.dx
+    bullet.y += bullet.dy
+    for enemy in all(enemies) do
+      if check_collision(enemy, bullet) then
+        del(player.bullets, bullet)
+        del(enemies, enemy)
+        create_enemy()
+      end
+    end
+    for rock in all(rocks) do
+      if check_collision(bullet, rock) then
+        del(player.bullets, bullet)
+      end
+    end
+  end
+  for rock in all(rocks) do
+    if check_collision({x=player.x+player.dx,
+                        y=player.y+player.dy,
+                        h=player.h, w=player.w}, rock) then
+      player.dx=0
+      player.dy=0
+    end
+  end
+  if check_collision(player, spaceship) then
+    power += player.batteries*10
+    if power > 100 then power = 100 end
+    player.batteries = 0
+    if #batteries == 0 then
+      shake=true
+      shake_timer = t+shake_duration
+      printh("shake time ".. shake_timer)
+      create_batteries()
+      -- found #batteries new batteries! animation
+    end
+  end
+  if abs(player.dx) > player.max_speed then
+    if player.dx < 0 then 
+      player.dx = -player.max_speed
+    else
+      player.dx = player.max_speed
+    end
+  end
+  if abs(player.dy) > player.max_speed then
+    if player.dy < 0 then 
+      player.dy = -player.max_speed
+    else
+      player.dy = player.max_speed
+    end
+  end
+  if player.dx != 0 or player.dy != 0 then
+    player.t=(player.t+1)%player.step
+    if (player.t==0) then
+      player.frame=(player.frame+1)%#player.sprites
+    end
+  else
+    player.frame=0
+  end
+  for battery in all(batteries) do
+    if player.batteries <=2 then
+      if check_collision(player, battery) then
+        del(batteries, battery)
+        player.batteries+=1
+      end
+    end
+  end
+  if player.x>screen_xwidth+60 then
+    player.x=screen_xwidth+60
+  end
+  player.x+=player.dx
+
+  if player.y+player.dy > 32 and player.y+player.dy < 120 then
+    player.y+=player.dy
+  end
+end
+
+function create_rocks()
+  for i=0,15 do
+    rock = {}
+    rock.y=rnd(128-32)+32
+    rock.x=50+rnd(screen_xwidth - 50)
+    rock.w=8
+    rock.h=8
+    while check_collision(rock, player) do
+      rock.y=rnd(128-32)+32
+      rock.x=50+rnd(screen_xwidth - 50)
+    end
+    for battery in all(batteries) do
+      while check_collision(rock, battery) do
+        rock.y=rnd(128-32)+32
+        rock.x=50+rnd(screen_xwidth - 50)
+      end
+    end
+    add(rocks, rock)
+  end
+end
+
+function create_enemy()
+  enemy = {}
+  enemy.t=0
+  enemy.x=100+rnd(200)
+  enemy.y=150
+  enemy.w=8
+  enemy.h=8
+  enemy.dx=0
+  enemy.dy=0
+  enemy.speed=enemy_speed
+  if rnd(1) < .5 then
+    enemy.y *= -1
+  end
+  add(enemies, enemy)
+end
+
+function update_enemies()
+  for enemy in all(enemies) do
+    -- enemy movement direction
+    if enemy.x < player.x then
+      enemy.dx=enemy.speed
+    elseif abs(enemy.x - player.x) < 5 then
+      enemy.dx=0
+    else
+      enemy.dx=-enemy.speed
+    end
+    if enemy.y < player.y then
+      enemy.dy=enemy.speed
+    elseif abs(enemy.y - player.y) < 5 then
+      enemy.dy=0
+    else
+      enemy.dy=-enemy.speed
+    end
+
+    -- enemy can't go through rocks either
+    for rock in all(rocks) do
+      if check_collision(enemy, rock) then
+        enemy.dx*=.5
+        enemy.dy*=.5
+      end
+    end
+    enemy.x+=enemy.dx
+    enemy.y+=enemy.dy
+    if check_collision(enemy, player) then
+      del(enemies, enemy)
+      create_enemy()
+      -- steal energy or something?
+      power -= 10
+    end
+  end
+end
+
+function draw_enemies()
+  for enemy in all(enemies) do
+    spr(48, enemy.x, enemy.y, 1,1, enemy.dx < 0, false)
+  end
+end
+
+function draw_player()
+  if player.aiming then
+    circ(player.aimer.x, player.aimer.y, 2, 7)
+    line(player.x+4, player.y+4, player.aimer.x, player.aimer.y, 7)
+  end
+  spr(player.sprites[player.frame+1],
+  		player.x,
+  		player.y,
+  		1,1,
+  		player.f,
+  		false)
+  -- draw bullets
+  for bullet in all(player.bullets) do
+    circfill(bullet.x, bullet.y, 1, 7)
+  end
+end
+
+function player_fire(left, right, up, down)
+  local bullet = {}
+  bullet.x = player.x+4
+  bullet.y = player.y+4
+  bullet.w = 4
+  bullet.h = 4
+  bullet.dx = 0
+  bullet.dy = 0
+  if left then
+    bullet.dx=-player.bullet_speed
+  elseif right then
+    bullet.dx=player.bullet_speed
+  end
+  if up then
+    bullet.dy=-player.bullet_speed
+  elseif down then
+    bullet.dy=player.bullet_speed
+  end
+  if bullet.dx != 0 or bullet.dy != 0 then
+    add(player.bullets, bullet)
+  end
+end
+
+function check_collision(thing1, thing2)
+  if thing1.x < thing2.x+thing2.w and
+     thing1.x+thing1.w > thing2.x and
+     thing1.y+thing1.h > thing2.y and
+     thing1.y < thing2.y+thing2.h and
+     thing1.y+thing1.h > thing2.y then
+     
+    return true
+  end
+  return false
+end
+
+function create_batteries()
+  for i=0,1+flr(rnd(2)) do
+    local battery = {}
+    battery.x = 128+rnd(screen_xwidth-128)
+    battery.y = 40+rnd(88)
+    battery.w = 8
+    battery.h = 8
+    battery.s = 10
+    while check_collision(battery, rock) do
+      battery.x = 128+ rnd(screen_xwidth)
+      battery.y = 40+rnd(78)
+    end
+    printh("created new battery at x:"..battery.x.." y:"..battery.y)
+    add(batteries, battery)
+  end
+end
+
+function draw_scavenge_ui()
+  print(power.."%", cam.x+17, 0, 7)
+  pal(5,7)
+  spr(10,cam.x+100, 0)
+  spr(10,cam.x+99, -1)
+  spr(10,cam.x+99, 0)
+  spr(10,cam.x+99, 1)
+  spr(10,cam.x+100, -1)
+  spr(10,cam.x+100, 0)
+  spr(10,cam.x+100, 1)
+  spr(10,cam.x+101, -1)
+  spr(10,cam.x+101, 0)
+  spr(10,cam.x+101, 1)
+  pal()
+  pal(5,0)
+  spr(10,cam.x+100, 0)
+
+
+  pal(5,7)
+  spr(10,cam.x+110, 0)
+  spr(10,cam.x+109, -1)
+  spr(10,cam.x+109, 0)
+  spr(10,cam.x+109, 1)
+  spr(10,cam.x+110, -1)
+  spr(10,cam.x+110, 0)
+  spr(10,cam.x+110, 1)
+  spr(10,cam.x+111, -1)
+  spr(10,cam.x+111, 0)
+  spr(10,cam.x+111, 1)
+  pal()
+  pal(5,0)
+  spr(10,cam.x+110, 0)
+
+  pal(5,7)
+  spr(10,cam.x+120, 0)
+  spr(10,cam.x+119, -1)
+  spr(10,cam.x+119, 0)
+  spr(10,cam.x+119, 1)
+  spr(10,cam.x+120, -1)
+  spr(10,cam.x+120, 0)
+  spr(10,cam.x+120, 1)
+  spr(10,cam.x+121, -1)
+  spr(10,cam.x+121, 0)
+  spr(10,cam.x+121, 1)
+  pal()
+  pal(5,0)
+  spr(10,cam.x+120, 0)
+
+
+  pal()
+  if player.batteries > 0 then
+    for i=1,player.batteries do
+      spr(10,cam.x+90+(i*10), 0)
+    end
+  end
+end
 __gfx__
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700000000000000000000000000000000000070000007770000077770000777770000000000000000000000000000000000000000000000000000000000
-00077000000000066666666666666666600000000076000007667000076667007666667000000000000000000000000000000000000000000000000000000000
-000770000000006ddddddd6dddddddddd60000000007600000765700076656707665667000000000000000000000000000000000000000000000000000000000
-00700700000006dd77777d6d777dd777dd6000000007760000076670007666707666667000000000000000000000000000000000000000000000000000000000
-0000000000006ddd77777d6d777dd777ddd600000000077000007770000777700777770000000000000000000000000000000000000000000000000000000000
-000000000006dddddddddd6ddddddddddddd60000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000666666666666666666666666660000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000555555555555555555555555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000005dddddddddddddddddddddd500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000005dddddddddddddddddddd5000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000555555555555555555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000eeee0005005000000000000000000000000000000000000000000
+00700700000000000000000000000000000000000070000007770000077770000777770000e25225055555500000000000000000000000000000000000000000
+0007700000000006666666666666666660000000007600000766700007666700766666700ee22522055555500000000000000000000000000000000000000000
+000770000000006ddddddd6dddddddddd600000000076000007657000766567076656670ee222225055555500000000000000000000000000000000000000000
+00700700000006dd77777d6d777dd777dd60000000077600000766700076667076666670ee222ed2055555500000000000000000000000000000000000000000
+0000000000006ddd77777d6d777dd777ddd6000000000770000077700007777007777700ee22ed2d055555500000000000000000000000000000000000000000
+000000000006dddddddddd6ddddddddddddd600000000000000000000000000000000000e2eedd52055555500000000000000000000000000000000000000000
+00000000000666666666666666666666666660000000000000000000000000000000000760000000000000000000000000000000000000000000000000000000
+00000000000555555555555555555555555550000000000000000000000000000000007766000000000000000000000000000000000000000000000000000000
+0000000000005dddddddddddddddddddddd500000000000000000000000000000000077666600000000000000000000000000000000000000000000000000000
+00000000000005dddddddddddddddddddd5000000000000000000000000000000000776666660000000000000000000000000000000000000000000000000000
+00000000000000555555555555555555550000000000000000000000000000000000766765750000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000767675570000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000766657550000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000000000000000000000000000766665750000000000000000000000000000000000000000000000000000
+00000000001111000011110000000000000000000011110000000000000000000000766666660000000000000000000000000000000000000000000000000000
+00111100011777700111111000111100001111000111111000000000000000000000766666660000000000000000000000000000000000000000000000000000
+01111110011111100117777001111110011111100117777000000000000000000000766666660000000000000000000000000000000000000000000000000000
+0117777011111111011111100117777001177770011111100000000000000000000c666666661000000000000000000000000000000000000000000000000000
+0111111001111110111111111111111111111111111111110000000000000000000c666666661000000000000000000000000000000000000000000000000000
+111111110111111101111110011111100111111001111110000000000000000000c1666666661100000000000000000000000000000000000000000000000000
+011111100100000001111110011111100111111001111110000000000000000000c1055555501100000000000000000000000000000000000000000000000000
+10000000000000000000000100000010010000100100001000000000000000000c11005555001110000000000000000000000000000000000000000000000000
+00222200002222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02222220022222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02277770022777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02222220022222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02222220022222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02222220022222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+02020200202020200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
