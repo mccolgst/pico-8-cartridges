@@ -4,10 +4,65 @@ __lua__
 player = {}
 
 function _init()
- mode=2
- driving_init()
- player_sel_init()
- scavenge_init()
+  mode=2
+ 
+  player.x = 128/2
+  player.y = 128/2
+  player.w = 8
+  player.h = 8
+  player.frame = 1
+  player.dx = 0
+  player.dy = 0
+  player.v = .08
+  player.f = false
+  player.t = 0
+  player.aiming = false
+  player.aimer = {}
+  player.aimer.x = player.x + 4
+  player.aimer.y = player.y + 4
+  player.bullets = {}
+  player.bullet_speed = 2
+  player.max_speed = 1.5
+  player.sprites = {37, 32, 33, 34, 35, 36}
+  player.step = 5
+  player.batteries = 0
+  player.health=100
+  player.max_health=100
+  player.money=100
+  player_inv = {
+   {name="gas",total=98,cost=20},
+   {name="food",total=1234,cost=2},
+   {name="tires",total=0,cost=40}
+  }
+  
+  car = {}
+  car.x=70
+  car.y=70
+  car.w=32
+  car.h=16
+  car.sprs = {}
+  car.sprs.top = {1,2,3,4}
+  car.sprs.bot = {17,18,19,20}
+  car.bump_timer=0  
+  car.ant_sprs = {5,6,7,8,8,7,6,5}
+  car.ant_frame = 1
+  car.t=0
+  car.ant_step=8
+  car.dust = {}
+  car.dust.colors = {13,6,7}
+  car.dust.particles = {}
+  car.health=45
+  car.max_health=100
+  car.driving_time = 0
+
+  if mode == 0 then
+    driving_init()
+  elseif mode == 1 then
+    player_sel_init()
+  elseif mode == 2 then
+    scavenge_init()
+  end
+
 end
 
 function _update()
@@ -41,19 +96,6 @@ end
 -- make it so there are >1 players later?
 
 function player_sel_init()
- players = {}
- player_inv = {
-   {name="gas",total=98,cost=20},
-   {name="food",total=1234,cost=2},
-   {name="tires",total=0,cost=40}
-
- }
- player = {
-   health=100,
-   max_health=100,
-   money=100,
-
- }
 
  store_money = 200
  index = 1
@@ -142,23 +184,6 @@ function driving_init()
   stars = {}
   stars_colors = {7,6}
   driving = true
-  car = {}
-  car.x=70
-  car.y=70
-  car.sprs = {}
-  car.sprs.top = {1,2,3,4}
-  car.sprs.bot = {17,18,19,20}
-  car.bump_timer=0  
-  car.ant_sprs = {5,6,7,8,8,7,6,5}
-  car.ant_frame = 1
-  car.t=0
-  car.ant_step=8
-  car.dust = {}
-  car.dust.colors = {13,6,7}
-  car.dust.particles = {}
-  car.health=45
-  car.max_health=100
-  car.driving_time = 0
 
   next_checkpoint = 200
   car.total_distance = 4
@@ -222,7 +247,7 @@ function driving_draw()
   draw_hud()
 
   pal(13,5)
-  draw_car()
+  draw_car(true)
   pal()
 end
 
@@ -280,7 +305,7 @@ function offset_x(number)
   return modx
 end
 
-function draw_car()
+function draw_car(moving)
   for i=1,#car.sprs.top do
     spr(car.sprs.top[i],
         car.x+(8*i),
@@ -292,9 +317,13 @@ function draw_car()
         car.y+8-(sin(t%100)))
   end
   for i=1,6 do
-    circfill(car.x+10+4*i,
-             car.y+11-(sin(t%100))+sin(.5-i/5+t*10)/2,1,7)
-
+    if moving then
+    		circfill(car.x+10+4*i,
+      		       car.y+11-(sin(t%100))+sin(.5-i/5+t*10)/2,1,7)
+    else
+    		circfill(car.x+10+4*i,
+      		       car.y+11,1,7)
+    end
   end 
   -- draw antenna
   spr(car.ant_sprs[car.ant_frame+1],
@@ -302,9 +331,10 @@ function draw_car()
       car.y-4-(sin(t%100)))
 
   -- draw trailing dust
-  foreach(car.dust.particles,
-          draw_dust_particle)
-  
+  if moving then
+    foreach(car.dust.particles,
+            draw_dust_particle)
+  end
 end
 
 function create_plx_layer(x,y,w,h,spd,sp,c)
@@ -386,37 +416,14 @@ end
 -- scavenging stage
 
 function scavenge_init()
-  player.x = 128/2
-  player.y = 128/2
-  player.w = 8
-  player.h = 8
-  player.frame = 1
-  player.dx = 0
-  player.dy = 0
-  player.v = .25
-  player.f = false
-  player.t = 0
-  player.aiming = false
-  player.aimer = {}
-  player.aimer.x = player.x + 4
-  player.aimer.y = player.y + 4
-  player.bullets = {}
-  player.bullet_speed = 2
-  player.max_speed = 1.5
-  player.sprites = {37, 32, 33, 34, 35, 36}
-  player.step = 3
-  player.batteries = 0
-  player.health=100
-  player.max_health=100
-  player.money=100
+  plx_layers = {}
+  create_plx_layer(0,34,16,1,0,64,2)  
+
   enemy_speed = .5
-  power = 50
-  spaceship = {}
-  spaceship.x = 20
-  spaceship.y = 80
-  spaceship.s = 24
-  spaceship.w = 16
-  spaceship.h = 16
+  power = 50 
+  car.x = 20
+  car.y = 80
+
   enemies = {}
   screen_xwidth = 300
   player.x = 128/2
@@ -427,21 +434,23 @@ function scavenge_init()
   cam.speed = .5
   cam.dx = 0
   batteries = {
-    {x=160,y=60, w=8, h=8, s=2},
-    {x=180,y=40, w=8, h=8, s=2},
   }
   rocks = {}
   rock_sprite = 9
   create_rocks()
   create_enemy()
-	 t=0
-		shake = false
-		shake_duration=30*.25 -- half second
-		shake_timer = 0
+	t=0
+
 end
 
 function scavenge_update()
   t+=1
+
+  car.t=(car.t+1)%car.ant_step
+  if (car.t==0) then
+      car.ant_frame=(car.ant_frame+1)%#car.ant_sprs
+  end
+
   if t%30==0 then power-=1 end
   player_update()
   update_enemies()
@@ -451,52 +460,34 @@ function scavenge_update()
 
   camera(cam.x,0)
 
-  if shake and shake_timer > t then
-    local shakex = rnd(5)
-    local shakey = rnd(5)
-    if flr(rnd(2)) == 0 then
-      shakex = - shakex
-    end
-    if flr(rnd(2)) == 0 then
-      shakey = - shakey
-    end
-    camera(cam.x+shakex, 0+shakey)
-  else
-    shake = false
-  end
 end
 
 function scavenge_draw()
 
   cls()
   --palt(0, false)
-  rectfill(cam.x,0,cam.x+128,128,13)
+  rectfill(cam.x,0,cam.x+128,128,1)
   rectfill(cam.x,0,cam.x+128,40,0)
   circfill(cam.x+20+1,20,9,6)
   circfill(cam.x+20+0,20,9,6)
   circfill(cam.x+20,20,8,7)
 
-  spr(spaceship.s,
-        spaceship.x,
-        spaceship.y,
-        spaceship.w/8,
-        spaceship.h/8)
+  -- draw parralax scrollers
+  plx_layers[1].x=cam.x
+  foreach(plx_layers,draw_plx)
+  
+  --spr(spaceship.s,
+  --      spaceship.x,
+  --      spaceship.y,
+  --      spaceship.w/8,
+  --      spaceship.h/8)
+  draw_car(false)
+  
   for rock in all(rocks) do
     spr(rock_sprite, rock.x, rock.y)
   end
   draw_player()
   draw_enemies()
-
-  for battery in all(batteries) do
-    pal(5, 7)
-    spr(battery.s, battery.x-1, battery.y)
-    spr(battery.s, battery.x+1, battery.y)
-    spr(battery.s, battery.x, battery.y+1)
-    spr(battery.s, battery.x, battery.y-1)
-    pal()
-    spr(battery.s, battery.x, battery.y)
-    
-  end
   draw_scavenge_ui()
 
 end
@@ -581,17 +572,11 @@ function player_update()
       player.dy=0
     end
   end
-  if check_collision(player, spaceship) then
+  if check_collision(player, car) then
     power += player.batteries*10
     if power > 100 then power = 100 end
     player.batteries = 0
-    if #batteries == 0 then
-      shake=true
-      shake_timer = t+shake_duration
-      printh("shake time ".. shake_timer)
-      create_batteries()
-      -- found #batteries new batteries! animation
-    end
+
   end
   if abs(player.dx) > player.max_speed then
     if player.dx < 0 then 
@@ -634,9 +619,9 @@ function player_update()
 end
 
 function create_rocks()
-  for i=0,15 do
+  for i=0,8 do
     rock = {}
-    rock.y=rnd(128-32)+32
+    rock.y=rnd(128-32)+36
     rock.x=50+rnd(screen_xwidth - 50)
     rock.w=8
     rock.h=8
@@ -664,6 +649,7 @@ function create_enemy()
   enemy.dx=0
   enemy.dy=0
   enemy.speed=enemy_speed
+  enemy.shadows = {}
   if rnd(1) < .5 then
     enemy.y *= -1
   end
@@ -672,6 +658,7 @@ end
 
 function update_enemies()
   for enemy in all(enemies) do
+    enemy.t+=1
     -- enemy movement direction
     if enemy.x < player.x then
       enemy.dx=enemy.speed
@@ -704,10 +691,46 @@ function update_enemies()
       power -= 10
     end
   end
+  if enemy.t % 2 == 0 then
+    local shadow = {
+      x=enemy.x,
+      y=enemy.y,
+      t=0
+    }
+    add(enemy.shadows, shadow)
+  end
+
+  for shadow in all(enemy.shadows) do
+    shadow.t+=1
+    if shadow.t > 20 then
+      del(enemy.shadows, shadow)
+    end
+  end
 end
 
 function draw_enemies()
   for enemy in all(enemies) do
+    pal(2,14)
+    pal(7,14)
+    --palt(8,true)
+    for shadow in all(enemy.shadows) do
+      --spr(48, shadow.x, shadow.y, 1, 1, enemy.dx < 0, false)
+      -- 'dusty shadows'
+      for x1=shadow.x,shadow.x+6 do
+        for y1=shadow.y,shadow.y+6 do
+          if flr(rnd(20)) == 1 then
+            pset(x1,y1,14)
+          end
+        end
+      end
+    end
+    --palt()
+    for i=-1,1 do
+      for j=-1,1 do
+        spr(48, enemy.x+i, enemy.y+j, 1,1, enemy.dx < 0, false)
+      end
+    end
+    pal()
     spr(48, enemy.x, enemy.y, 1,1, enemy.dx < 0, false)
   end
 end
@@ -776,7 +799,6 @@ function create_batteries()
       battery.x = 128+ rnd(screen_xwidth)
       battery.y = 40+rnd(78)
     end
-    printh("created new battery at x:"..battery.x.." y:"..battery.y)
     add(batteries, battery)
   end
 end
@@ -842,26 +864,26 @@ __gfx__
 000000000000000000000000000000000000000000000000000000000000000000000000000eeee0005005000000000000000000000000000000000000000000
 00700700000000000000000000000000000000000070000007770000077770000777770000e25225055555500000000000000000000000000000000000000000
 0007700000000006666666666666666660000000007600000766700007666700766666700ee22522055555500000000000000000000000000000000000000000
-000770000000006ddddddd6dddddddddd600000000076000007657000766567076656670ee222225055555500000000000000000000000000000000000000000
-00700700000006dd77777d6d777dd777dd60000000077600000766700076667076666670ee222ed2055555500000000000000000000000000000000000000000
-0000000000006ddd77777d6d777dd777ddd6000000000770000077700007777007777700ee22ed2d055555500000000000000000000000000000000000000000
-000000000006dddddddddd6ddddddddddddd600000000000000000000000000000000000e2eedd52055555500000000000000000000000000000000000000000
+000770000000006555555565555555555600000000076000007657000766567076656670ee222225055555500000000000000000000000000000000000000000
+007007000000065577777565777557775560000000077600000766700076667076666670ee222ed2055555500000000000000000000000000000000000000000
+000000000000655577777565777557775556000000000770000077700007777007777700ee22ed2d055555500000000000000000000000000000000000000000
+000000000006555555555565555555555555600000000000000000000000000000000000e2eedd52055555500000000000000000000000000000000000000000
 00000000000666666666666666666666666660000000000000000000000000000000000760000000000000000000000000000000000000000000000000000000
 00000000000555555555555555555555555550000000000000000000000000000000007766000000000000000000000000000000000000000000000000000000
-0000000000005dddddddddddddddddddddd500000000000000000000000000000000077666600000000000000000000000000000000000000000000000000000
-00000000000005dddddddddddddddddddd5000000000000000000000000000000000776666660000000000000000000000000000000000000000000000000000
+00000000000055555555555555555555555500000000000000000000000000000000077666600000000000000000000000000000000000000000000000000000
+00000000000005555555555555555555555000000000000000000000000000000000776666660000000000000000000000000000000000000000000000000000
 00000000000000555555555555555555550000000000000000000000000000000000766765750000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000767675570000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000766657550000000000000000000000000000000000000000000000000000
 00000000000000000000000000000000000000000000000000000000000000000000766665750000000000000000000000000000000000000000000000000000
-00000000001111000011110000000000000000000011110000000000000000000000766666660000000000000000000000000000000000000000000000000000
-00111100011777700111111000111100001111000111111000000000000000000000766666660000000000000000000000000000000000000000000000000000
-01111110011111100117777001111110011111100117777000000000000000000000766666660000000000000000000000000000000000000000000000000000
-0117777011111111011111100117777001177770011111100000000000000000000c666666661000000000000000000000000000000000000000000000000000
-0111111001111110111111111111111111111111111111110000000000000000000c666666661000000000000000000000000000000000000000000000000000
-111111110111111101111110011111100111111001111110000000000000000000c1666666661100000000000000000000000000000000000000000000000000
-011111100100000001111110011111100111111001111110000000000000000000c1055555501100000000000000000000000000000000000000000000000000
-10000000000000000000000100000010010000100100001000000000000000000c11005555001110000000000000000000000000000000000000000000000000
+0000000000dddd0000dddd00000000000000000000dddd0000000000000000000000766666660000000000000000000000000000000000000000000000000000
+00dddd000dd777700dddddd000dddd0000dddd000dddddd000000000000000000000766666660000000000000000000000000000000000000000000000000000
+0dddddd00dddddd00dd777700dddddd00dddddd00dd7777000000000000000000000766666660000000000000000000000000000000000000000000000000000
+0dd77770dddddddd0dddddd00dd777700dd777700dddddd00000000000000000000c666666661000000000000000000000000000000000000000000000000000
+0dddddd00dddddd0dddddddddddddddddddddddddddddddd0000000000000000000c666666661000000000000000000000000000000000000000000000000000
+dddddddd0ddddddd0dddddd00dddddd00dddddd00dddddd0000000000000000000c1666666661100000000000000000000000000000000000000000000000000
+0dddddd00d0000000dddddd00dddddd00dddddd00dddddd0000000000000000000c1055555501100000000000000000000000000000000000000000000000000
+d0000000000000000000000d000000d00d0000d00d0000d000000000000000000c11005555001110000000000000000000000000000000000000000000000000
 00222200002222000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 02222220022222200000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 02277770022777700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
