@@ -10,7 +10,7 @@ function _init()
   end
   state[1][128/2]=true
 
-  --rnd_init()  
+  rnd_init()  
 end
 
 function rnd_init()
@@ -26,14 +26,14 @@ end
 
 function _update60()
   t+=1
-  --add(state,rule30(state[#state]))  
-  --add(state,rule90(state[#state]))  
-  --add(state,rule90_fancy(state[#state]))  
-  add(state,rule_184(state[#state]))
+  --add(state,iterate_rule(state[#state],rule30))
+  --add(state,iterate_rule(state[#state],rule90))
+  --add(state,iterate_rule(state[#state],rule184))
+  add(state,iterate_rule(state[#state],rule106))
+    
   if #state>=128 then
     camera(0,#state-128)
     del(state,state[1])
-    printh(#state)
   end
 end
 
@@ -51,75 +51,50 @@ function _draw()
 end
 
 function rule90(in_array)
-  out_array = {}
-  for i=-128,128 do
-    cel = false
-    l=in_array[i]
-    m=in_array[i+1]
-    r=in_array[i+2]
-    if (l and m and not r)
-    or (l and not m and not r)
-    or (not l and m and r)
-    or (not l and not m and r) then
-      cel=true
-    else
-      cel=false
-    end
-    out_array[i+1]=cel
-  end
-  return out_array
+  return (
+    (l and m and not r) or
+    (l and not m and not r) or
+    (not l and m and r) or
+    (not l and not m and r)
+  ) or false 
 end
 
-function rule90_fancy(in_array)
-  out_array = {}
-  for i=-128,128 do
-    l=in_array[i]
-    m=in_array[i+1]
-    r=in_array[i+2]
-    out_array[i+1] = (
-       (l and m and not r)
-    or (l and not m and not r)
-    or (not l and m and r)
-    or (not l and not m and r))
-    or false 
-  end
-  return out_array
+function rule30(l,m,r)
+  return (
+    (l and not m and not r) or
+    (not l and m and r) or
+    (not l and m and not r) or
+    (not l and not m and r)
+  ) or false
 end
 
-function rule30(in_array)
-  out_array = {}
-  for i=-128,128 do
-    cel = false
-    l=in_array[i]
-    m=in_array[i+1]
-    r=in_array[i+2]
-    if (l and not m and not r)
-    or (not l and m and r)
-    or (not l and m and not r)
-    or (not l and not m and r) then
-      cel=true
-    else
-      cel=false
-    end
-    out_array[i+1]=cel
-  end
-  return out_array
+function rule184(l,m,r)
+  return (
+    (l and m and r) or
+    (l and not m and r) or
+    (l and not m and not r) or
+    (not l and m and r)
+  ) or false
 end
 
-function rule_184(in_array)
-  local out_array = {}
+function rule106(l,m,r)
+  return (
+    (l and m and not r) or
+    (l and not m and r) or
+    (not l and m and r) or
+    (not l and not m and r)
+  ) or false
+end
+
+function iterate_rule(in_state,fn)
+  local out_state = {}
   for i=-128,128 do
-    l=in_array[i]
-    m=in_array[i+1]
-    r=in_array[i+2]
-    out_array[i+1] = (
-         (l and m and r)
-      or (l and not m and r)
-      or (l and not m and not r)
-      or (not l and m and r)
-    ) or false
+    l=in_state[i]
+    m=in_state[i+1]
+    r=in_state[i+2]
+    out_state[i+1] = fn(l,m,r)
   end
-  return out_array
+  return out_state
 end
 __label__
 88888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888888817188888888888888888888888888888
