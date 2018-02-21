@@ -29,8 +29,10 @@ function _update60()
   --add(state,iterate_rule(state[#state],rule30))
   --add(state,iterate_rule(state[#state],rule90))
   --add(state,iterate_rule(state[#state],rule184))
-  add(state,iterate_rule(state[#state],rule106))
-    
+  --add(state,iterate_rule(state[#state],rule106))
+  --add(state,iterate_rule(state[#state],rule45))
+  --add(state,iterate_rule(state[#state],rule26))
+  add(state,iterate_rule(state[#state],rule41))
   if #state>=128 then
     camera(0,#state-128)
     del(state,state[1])
@@ -50,13 +52,12 @@ function _draw()
   end
 end
 
-function rule90(in_array)
+function rule26(l,m,r)
   return (
-    (l and m and not r) or
     (l and not m and not r) or
     (not l and m and r) or
     (not l and not m and r)
-  ) or false 
+  ) or false
 end
 
 function rule30(l,m,r)
@@ -68,13 +69,30 @@ function rule30(l,m,r)
   ) or false
 end
 
-function rule184(l,m,r)
+function rule41(l,m,r)
   return (
-    (l and m and r) or
     (l and not m and r) or
-    (l and not m and not r) or
-    (not l and m and r)
+    (not l and m and r) or
+    (not l and not m and not r)
   ) or false
+end
+
+function rule45(l,m,r)
+  return (
+    (l and not m and r) or
+    (not l and m and r) or
+    (not l and m and not r) or
+    (not l and not m and not r)
+  ) or false
+end
+
+function rule90(in_array)
+  return (
+    (l and m and not r) or
+    (l and not m and not r) or
+    (not l and m and r) or
+    (not l and not m and r)
+  ) or false 
 end
 
 function rule106(l,m,r)
@@ -83,6 +101,15 @@ function rule106(l,m,r)
     (l and not m and r) or
     (not l and m and r) or
     (not l and not m and r)
+  ) or false
+end
+
+function rule184(l,m,r)
+  return (
+    (l and m and r) or
+    (l and not m and r) or
+    (l and not m and not r) or
+    (not l and m and r)
   ) or false
 end
 
