@@ -21,13 +21,14 @@ player = {x=64,
           jumping=false,
           dy=0,dx=0,
           w=8,h=8,
+          max_speed=-20
 }
 feather_fx = {}
 dust_fx = {}
 cam={x=0,y=0}
-branches = {{x=50,y=30,w=6,h=3, short=true, leaves={{x=10,y=30,w=8,h=8,bounce=false,}}},
+branches = {{x=50,y=30,w=6,h=3, s=64, flipx=false, leaves={{x=90,y=30,h=8,w=8,bounce=true}}},
              --{x=50,y=50,w=6,h=3, leaves={{x=20,y=50,w=8,h=8,bounce=true}}},
-             {x=60,y=80,w=6,h=3, short=true, leaves={{x=30,y=80,w=8,h=8,bounce=false}}}}
+             {x=60-(6*8),y=80,w=6,h=3, s=64, flipx=true, leaves={{x=104-((6*8)*2),y=80,w=8,h=8,bounce=false}}}}
 tree_seg_height=2
 tree = {}
 const_acorn_timer=20*2
@@ -39,6 +40,7 @@ t=0
 
 function _init()
   add(tree, {x=rnd(20),y=128})
+  --more_branches()
   for i=1,256*tree_seg_height do
     add(tree, {x=30+rnd(20),y=tree[#tree].y-tree_seg_height})
   end
@@ -72,19 +74,20 @@ function _draw()
   rectfill(cam.x,cam.y,cam.x+128,cam.y+128,12)
 
   draw_tree()
-  animate(player)
-  draw_feather_fx()
-  draw_branches()
-  draw_dust_fx()
   draw_sun()
+  draw_branches()
+  draw_feather_fx()
+  draw_dust_fx()
   draw_acorns()
+  animate(player)
   outline_spr(player.sprites[player.state].sprites[player.frame+1],
       player.x,
       player.y,
       1,1,1,player.flipx)
   --pset(player.x,player.y,8)
   pset(cam.x,cam.y,8)
-
+  print(stat(1),cam.x+100,cam.y+117,1)
+  print(stat(0),cam.x+100,cam.y+123,1)
 end
 
 function animate(obj)
@@ -101,8 +104,8 @@ function update_player()
     player.state="jumping"
     player.frame=0
     create_dust_fx(player.x, player.y, false)
-    create_dust_fx(player.x, player.y, false)
-    create_dust_fx(player.x, player.y, false)
+    --create_dust_fx(player.x, player.y, false)
+    --create_dust_fx(player.x, player.y, false)
   end
   if btn(0) then
     player.dx-=x_speed
@@ -123,8 +126,8 @@ function update_player()
   --animate(player)
   if player.dy<-10 then
         create_dust_fx(player.x, player.y, true)
-        create_dust_fx(player.x, player.y, true)
-        create_dust_fx(player.x, player.y, false)  
+        --create_dust_fx(player.x, player.y, true)
+        --create_dust_fx(player.x, player.y, false)  
   end
 
   -- dy decay and gravity
@@ -146,39 +149,16 @@ function update_player()
 
   -- check if hit branch
   for branch in all(branches) do
-    --[[
-    if abs((player.y+8+player.dy)-(branch.y))<3 and
-       player.x>branch.x-4 and
-       player.x<branch.x+20 then
-      if branch.bounce then
-        player.dy-=20
-        create_dust_fx(player.x, player.y, false)
-        create_dust_fx(player.x, player.y, false)
-        create_dust_fx(player.x, player.y, false)
-
-      elseif player.dy>0 then
-        player.y=branch.y-8
-        player.dy=0
-        if player.state=="jumping" then 
-          create_dust_fx(player.x, player.y, false)
-          create_dust_fx(player.x, player.y, false)
-          create_dust_fx(player.x, player.y, false)
-          player.state="standing"
-        end
-      end
-    end
-    --]]
     for leaf in all(branch.leaves) do
       if check_collision(player, leaf) then
-
         if leaf.bounce then
           player.dy-=20
         elseif player.dy>0 then
           player.y=leaf.y-8
           player.dy=0
           if player.state=="jumping" then 
-            create_dust_fx(player.x, player.y, false)
-            create_dust_fx(player.x, player.y, false)
+            --create_dust_fx(player.x, player.y, false)
+            --create_dust_fx(player.x, player.y, false)
             create_dust_fx(player.x, player.y, false)
             player.state="standing"
           end
@@ -204,7 +184,8 @@ function update_player()
   if player.dy>0 then
     player.state="jumping"
   end
-
+  -- max speed
+  player.dy=max(player.dy,player.max_speed)
   -- move player
   player.y+=player.dy
   player.x+=player.dx
@@ -227,7 +208,7 @@ function update_feather_fx()
     fx.t+=1
     fx.x=fx.x+cos((fx.t%60/60))
     fx.y+=0.5
-    if fx.t>30*5 then
+    if fx.t>30*3 then
       del(feather_fx, fx)
     end
   end
@@ -260,50 +241,50 @@ function outline_spr(sprite, x, y, w, h, c, flip_x)
 end
 
 function draw_branches()
-  outline = 1
-  local sprite = 64
   for branch in all(branches) do
-    if #branch.leaves<1 then
-      printh("PROBLEM HERE.."..branch.x.." "..branch.y.." branch.short:"..tostr(branch.short))
-      rect(branch.x,branch.y,branch.x+branch.w*8,branch.y+branch.h*8,8)
-
-    end
-    
-    --printh("branch.x:"..branch.x.." branch.y:"..branch.y.." branch.short:"..tostr(branch.short).." branch.flipx:"..tostr(branch.flipx))
-    --if branch.bounce then color = 11 else color = 3 end
-    if branch.short then sprite = 70 end
     if branch.flipx then
       pal(4,2)
       pal(9,4)
       pal(10,9)
     end
-    spr(sprite,branch.x,branch.y,branch.w,branch.h,branch.flipx)
+    spr(branch.s,branch.x,branch.y,
+        branch.w,branch.h,branch.flipx,false)
     pal()
+  end
+  for branch in all(branches) do
     for leaf in all(branch.leaves) do
-      printh("leaf.x:"..leaf.x.." leaf.y:"..leaf.y)
       local sprite = 59
       if leaf.bounce then
-        sprite = 60
+        sprite = 61
       end
-      rect(leaf.x,leaf.y,leaf.x+8,leaf.y+8,8)
-      outline_spr(sprite,leaf.x,leaf.y,1,1,1,false)
+      --outline_spr(sprite,leaf.x,leaf.y,1,1,1,false)
+      local x= 11*8
+      if leaf.bounce then
+        x=12*8
+      end
+      if not leaf.bounce then
+        --outline_spr(sprite,leaf.x,leaf.y,2,1,1,false)
+        spr(sprite,leaf.x,leaf.y,2,1)
+        --sspr(x,3*8,8,8,
+        --    leaf.x,leaf.y,leaf.w,leaf.h)
+      end
     end
-    --outline_spr(59,branch.x,branch.y,1,1,1,false)
-
-    --[[
-    line(branch.x,branch.y-1,branch.x+20,branch.y-1,outline)
-
-    line(branch.x,branch.y,branch.x+20,branch.y,color)
-    line(branch.x+3,branch.y+1,branch.x+17,branch.y+1,color)
-    line(branch.x+5,branch.y+2,branch.x+15,branch.y+2,color)
-    
-    --bottom
-    line(branch.x+5,branch.y+2,branch.x+15,branch.y+2,outline)
-
-    --corners
-    line(branch.x+5,branch.y+2,branch.x-1,branch.y-1,outline)
-    line(branch.x+15,branch.y+2,branch.x+21,branch.y-1,outline)
-    --]]
+    -- draw bouncybois
+    for leaf in all(branch.leaves) do
+      local sprite = 59
+      if leaf.bounce then
+        sprite = 61
+      end
+      --outline_spr(sprite,leaf.x,leaf.y,1,1,1,false)
+      local x= 11*8
+      if leaf.bounce then
+        x=12*8
+      end
+      if leaf.bounce then
+        --outline_spr(sprite,leaf.x,leaf.y,2,1,1,false)
+        spr(sprite,leaf.x,leaf.y,2,1)
+      end
+    end
   end
 end
 
@@ -325,7 +306,9 @@ function update_tree()
 end
 
 function update_branches()
-  for branch in all(branches) do
+  if #branches>30 then
+    for leaf in all(branches[1].leaves) do del(branches[1].leaves,leaf) end
+    del(branches,branches[1])
   end
 end
 
@@ -338,86 +321,54 @@ end
 
 function more_branches()
   if abs(branches[#branches].y) - abs(player.y) < 200 then
-    printh("more branches "..branches[#branches].y.." playery:"..player.y)
+    -- make more branches
     for i=1,10 do
-      local branch = {}
-      branch.leaves = {}
-      branch.x=24+rnd(24)
-      branch.short = false
-      branch.flipx = false
-      branch.w = 6
-      branch.h = 3
-      branch.y=branches[#branches].y-(i*5)
-
-      if #branch.leaves<1 then printh("PROBLEM HERE IN MAKING BEGIN.."..branch.x.." "..branch.y.." branch.short:"..tostr(branch.short)) end
-
-      if branch.x<90 and branch.x>30 then
-        branch.short=true
-        branch.w=2
-        branch.h=2
+      local new_branch = {
+        s=64,
+        w=6,
+        h=3,
+        x=58+rnd(12),
+        y=branches[#branches].y-(i*6),
+        flipx=false,
+        leaves={}
+      }
+      -- flip a coin and see if branch should be short branch
+      if flr(rnd(2)) == 0 then
+        new_branch.s=70
+        new_branch.w=2
+        new_branch.h=2
       end
-      if branch.x<64 then
-        -- invert
-        branch.flipx=true
-        --branch.x-=branch.w*8
-      end
-      --if branch.x<16 then branch.x+=16 end
-      --if branch.x>80 then branch.x-=30 end
-      --branch.bounce=flr(rnd(6))==0
-      if branch.short then
-        for j=1,3 do
-          local leaf = {}
-          leaf.bounce=flr(rnd(6))==0
-          local xmod=rnd(3)
-          if flr(rnd(2))==0 then xmod*=-1 end
-          local xpos = branch.x+(8*2)+xmod
-          local ymod=rnd(3)
-          if flr(rnd(2))==0 then ymod*=-1 end
-          local ypos = branch.y+(8*2)+ymod
-          if flr(rnd(2))==0 then ypos*=-1 end
-          --local xpos=branch.x+8
-          --local ypos=branch.y+(8*2)
-          leaf.x=xpos
-          leaf.y=ypos
-          leaf.w=8
-          leaf.h=8
-          if branch.flipx then leaf.x-=branch.w*8 end
 
-          add(branch.leaves,leaf)
-        end
-      else
-        --[[
-        for j=1,1+flr(rnd(6)) do
-          local leaf = {}
-          leaf.bounce=flr(rnd(6))==0
-          local xpos = branch.x+(8*5)+rnd(8)
-          --if flr(rnd(2))==0 then xpos*=-1 end
-          local ypos = branch.y+rnd(8)
-          --if flr(rnd(2))==0 then ypos*=-1 end
-          leaf.x=xpos
-          leaf.y=ypos
-          leaf.w=8
-          leaf.h=8
-          add(branch.leaves,leaf)
-        end
-        for j=1,1+flr(rnd(6)) do
-          local leaf = {}
-          leaf.bounce=flr(rnd(6))==0
-          local xpos = branch.x+(8*4)+rnd(8)
-          --if flr(rnd(2))==0 then xpos*=-1 end
-          local ypos = branch.y+(8*3)+rnd(8)
-          --if flr(rnd(2))==0 then ypos*=-1 end
-          leaf.x=xpos
-          leaf.y=ypos
-          leaf.w=8
-          leaf.h=8
-          add(branch.leaves,leaf)
-        end
-        --]]
+      -- for each branch, make some leaves in appropriate position
+      for j=1,1+flr(rnd(8)) do
+        local new_leaf = {
+          x=new_branch.x+(new_branch.w*8)-8,
+          y=new_branch.y,
+          w=16,h=16,
+          bounce=false
+        }
+        -- randomize x and y a bit, decide if bouncyboi
+        local modx = rnd(7)
+        local mody = rnd(3)
+        if flr(rnd(2)) == 0 then modx*=-1 end
+        if flr(rnd(2)) == 0 then mody*=-1 end
+        if flr(rnd(6)) == 0 then new_leaf.bounce=true new_leaf.y-=6 end
+        new_leaf.x+=modx
+        new_leaf.y+=mody
+        add(new_branch.leaves,new_leaf)
       end
-      add(branches,branch)
-      if #branch.leaves<1 then printh("PROBLEM HERE IN MAKING.."..branch.x.." "..branch.y.." branch.short:"..tostr(branch.short)) end
+      -- check if branch should be facing other way, modify xpos
+      if new_branch.x<128/2 then
+        new_branch.flipx=true
+        new_branch.x-=new_branch.w*8
 
+        -- go through all leaves and modify the xpos if flipped
+        for leaf in all(new_branch.leaves) do
+          leaf.x-=(new_branch.w*16)
+        end
+      end
+
+      add(branches,new_branch)
     end
   end
 end
@@ -435,7 +386,9 @@ function update_acorns()
   for acorn in all(acorns) do
     acorn.y+=3
     acorn.t+=1
-    if acorn.t%flr(rnd(5))==0 then create_dust_fx(acorn.x, acorn.y, true) end
+    if acorn.t%flr(rnd(5))==0 then
+      create_dust_fx(acorn.x, acorn.y, true)
+    end
 
     if acorn.y > (player.y+200) then
       del(acorns, acorn)
@@ -489,18 +442,10 @@ function create_dust_fx(x,y,is_acorn_dust)
     }
     local mody = rnd(2)
     local modx = rnd(2)
-    if flr(rnd(2)) == 0 then
-      mody*=-1
-    end
-    if flr(rnd(2)) == 0 then
-      modx*=-1
-    end
-    if flr(rnd(2)) == 0 then
-      dust.dy*=-1
-    end
-    if flr(rnd(2)) == 0 then
-      dust.dx*=-1
-    end
+    if flr(rnd(2)) == 0 then mody*=-1 end
+    if flr(rnd(2)) == 0 then modx*=-1 end
+    if flr(rnd(2)) == 0 then dust.dy*=-1 end
+    if flr(rnd(2)) == 0 then dust.dx*=-1 end
     dust.x=x+4+modx
     dust.y=y+mody
     if not is_acorn_dust then dust.y+=9 end
@@ -542,7 +487,6 @@ end
 function draw_sun()
   -- draw a radial pattern that moves around and stuff or something i dono
   p1={x=cam.x+110, y=cam.y+15}
-  --line(cos(t/60)*5+p1.x,sin(t/60)*5+p1.y,cos(t/60)*10+p1.x,sin(t/60)*10+p1.y,7)
   for i=0,6 do
     local pos = t%120/120
     local mod = 12
@@ -627,30 +571,30 @@ __gfx__
 000000000777dd700777dd70077777d7077777d70000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000777700007777000777dd700777dd700000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000009090000090900000909000009090000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000000900000bbbb0000aaaa00000000000000000000000000
-00000000000000000000000000000000000000000000000000000000055555550ddddddd07777777000090000b3b3bb00ababaa0000000000000000000000000
-00000000000000000000000000000000000000000000000000000000055515550ddd2ddd07778777004449003333b3bbbbbbabaa000000000000000000000000
-00000000000000000000000000000000000000000000000000000000055515550ddd2ddd0777877704444990333b3b3bbbbababa000000000000000000000000
-000000000000000000000000000000000000000000000000000000000055555000ddddd00077777000999a00333333b3bbbbbbab000000000000000000000000
-0000000000000000000000000000000000000000000000000000000000051500000d2d000007870000999a0033333b3bbbbbbaba000000000000000000000000
-00000000000000000000000000000000000000000000000000000000000050000000d000000070000099aa00033333300bbbbbb0000000000000000000000000
-000000000000000000000000000000000000000000000000000000000000000000000000000000000009a0000033330000bbbb00000000000000000000000000
-000000000000000000000000000000000000000000000a9099a00000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000000a940499a0000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000000aa940014a9a000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000000a94400a0149a000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000000000000aa94aaaa901499a00000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000000000000000000000000000000aaaaa9a49400149a00000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000000aa994944441000149a0000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000000000aaa99444411100000149a0000000000000000000000000000000000000000000000000000000000000000000000000
-000000000000000000000000000000aaaa994941110000000000149a000000000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000000000000000aa9994944100000000000000014a000000000000000000000000000000000000000000000000000000000000000000000000
-00aaaaaaa0000000000000000aaa9a44444100000000000000000144900000000000000000000000000000000000000000000000000000000000000000000000
-099a999a9aaaaaaaaaaaaaaaa9a94941111000000000000000000019a00000000000000000000000000000000000000000000000000000000000000000000000
-0449944949a999a99a99a994944911000000000000000000000000149a0000000000000000000000000000000000000000000000000000000000000000000000
-011111444449494444949a44411000000000000000000000000000014aa000000000000000000000000000000000000000000000000000000000000000000000
-0000001111111111144494a11000000000000000000000000000000014a900000000000000000000000000000000000000000000000000000000000000000000
-0000000000000000011149aa00000000000000000000000000000000149aa0000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000000900000033b3bb3bbbb00000bbabaabaaaa0000000000
+00000000000000000000000000000000000000000000000000000000055555550ddddddd0777777700009000033333333b3b3bb00bbbbbbbbababaa000000000
+00000000000000000000000000000000000000000000000000000000055515550ddd2ddd077787770044490011333333b3b3b3bb33bbbbbbabababaa00000000
+00000000000000000000000000000000000000000000000000000000055515550ddd2ddd0777877704444990131333333b3b3b3b3b3bbbbbbabababa00000000
+000000000000000000000000000000000000000000000000000000000055555000ddddd00077777000999a00113133333333b3b333b3bbbbbbbbabab00000000
+0000000000000000000000000000000000000000000000000000000000051500000d2d000007870000999a001313133333333b3b3b3b3bbbbbbbbaba00000000
+00000000000000000000000000000000000000000000000000000000000050000000d000000070000099aa00013133333333333001b3bbbbbbbbbbb000000000
+000000000000000000000000000000000000000000000000000000000000000000000000000000000009a0000011111111111300001111111111330000000000
+000000000000000000000000000000000000000000000a900000000000000a990000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000000a940000000000000a9940000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000000aa940000000000000a9a410000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000000a94400a00000000000a94100000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000000000000aa94aaaa90000000000a994100000000000000000000000000000000000000000000000000000000000000000
+00000000000000000000000000000000000000aaaaa9a4940000000000a941000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000000aa994944441000000000a9410000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000000000aaa99444411100000000000a9410000000000000000000000000000000000000000000000000000000000000000000
+000000000000000000000000000000aaaa9949411100000000000000a94100000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000000000000000aa99949441000000000000000000a41000000000000000000000000000000000000000000000000000000000000000000000
+00aaaaaaa0000000000000000aaa9a44444100000000000000000009441000000000000000000000000000000000000000000000000000000000000000000000
+099a999a9aaaaaaaaaaaaaaaa9a9494111100000000000000000000a910000000000000000000000000000000000000000000000000000000000000000000000
+0449944949a999a99a99a994944911000000000000000000000000a9410000000000000000000000000000000000000000000000000000000000000000000000
+011111444449494444949a4441100000000000000000000000000aa4100000000000000000000000000000000000000000000000000000000000000000000000
+0000001111111111144494a110000000000000000000000000009a41000000000000000000000000000000000000000000000000000000000000000000000000
+0000000000000000011149aa000000000000000000000000000aa941000000000000000000000000000000000000000000000000000000000000000000000000
 000000000000000000004999a0000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000014499aaaaaaa000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000000000000000000144994a99a000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
