@@ -1,9 +1,17 @@
 pico-8 cartridge // http://www.pico-8.com
 version 16
 __lua__
+poke(0x5f2c,3) -- set resolution to 64x64
+
+
+-- todo combo system omg freal
+-- jump attack
+-- jump defend from above
+-- powerups
 function _init()
- poke(0x5f2c,3) // set resolution to 64x64
+ mode=0
  x=30
+ score=0
  show_hitbox=-1
  saber_colors={12,7,6}
  laser_colors={8,7,14}
@@ -21,16 +29,16 @@ function _init()
     health=3,
     hbox={
       running={
-        f={xmod=3,ymod=2,w=2,h=6},
-        t={xmod=3,ymod=2,w=2,h=6}
+        f={xmod=3,ymod=1,w=2,h=6},
+        t={xmod=3,ymod=1,w=2,h=6}
       },
       idle={
-        f={xmod=3,ymod=2,w=2,h=6},
-        t={xmod=3,ymod=2,w=2,h=6}
+        f={xmod=3,ymod=1,w=2,h=6},
+        t={xmod=3,ymod=1,w=2,h=6}
       },
       kicking={
-        f={xmod=5,ymod=2,w=4,h=3},
-        t={xmod=3,ymod=2,w=-4,h=3}
+        f={xmod=5,ymod=1,w=4,h=3},
+        t={xmod=3,ymod=1,w=-4,h=3}
       },
       fighting={
         f={xmod=0,ymod=1,w=7,h=7},
@@ -85,125 +93,155 @@ function _init()
 end
 
 function _update()
-  if btn(0) then
-    p.x-=.5
-    p.state="running"
-    p.flip="t"
-  elseif btn(1) then
-    p.x+=.5
-    p.state="running"
-    p.flip="f"
-  elseif btnp(3) then
-    show_hitbox*=-1
-  elseif p.state=="running" then
-    p.state="idle"
-    p.frame=0
-  elseif btnp(4) and p.state != "fighting" then
-    p.state="fighting"
-    p.frame=0
-  elseif btnp(4) and p.state == "fighting" then
-    p.state="idle"
-    p.frame=0
-  elseif not btnp(5) and p.kickdelay<=0 and p.state=="kicking" then
-    p.state="idle"
-    p.frame=0
-  elseif not btnp(5) and p.state=="kicking" and p.kickdelay>0 then
-    p.kickdelay-=1
-  elseif btnp(5) then
-    p.state="kicking"
-    p.kickdelay=4
-  end
-  if p.state=="deflecting" or p.state=="fighting" and (p.deflectdelay>0) then
-    --p.deflectdelay-then=1
-    p.state="deflecting"
-    p.deflectdelay-=1
-  end
-  if p.state=="deflecting" and p.deflectdelay<=0 then
-    p.state="idle"
-    p.frame=0
-  end
- 
   t+=1
-  animate(p)
-  update_enemies()
-  update_player()
-  update_fx()
+  if mode == 0 then  -- title
+    if btnp(4) then
+      _init()
+      mode+=1
+    end
+  elseif mode == 2 then -- endgame screen
+    if btnp(4) then
+      _init()
+    end
+  elseif mode == 1 then
+    if btn(0) then
+      p.x-=.5
+      p.state="running"
+      p.flip="t"
+    elseif btn(1) then
+      p.x+=.5
+      p.state="running"
+      p.flip="f"
+    elseif btnp(3) then
+      show_hitbox*=-1
+    elseif p.state=="running" then
+      p.state="idle"
+      p.frame=0
+    elseif btnp(4) and p.state != "fighting" then
+      p.state="fighting"
+      p.frame=0
+    elseif btnp(4) and p.state == "fighting" then
+      p.state="idle"
+      p.frame=0
+    elseif not btnp(5) and p.kickdelay<=0 and p.state=="kicking" then
+      p.state="idle"
+      p.frame=0
+    elseif not btnp(5) and p.state=="kicking" and p.kickdelay>0 then
+      p.kickdelay-=1
+    elseif btnp(5) then
+      p.state="kicking"
+      p.kickdelay=4
+    end
+    if p.state=="deflecting" or p.state=="fighting" and (p.deflectdelay>0) then
+      --p.deflectdelay-then=1
+      p.state="deflecting"
+      p.deflectdelay-=1
+    end
+    if p.state=="deflecting" and p.deflectdelay<=0 then
+      p.state="idle"
+      p.frame=0
+    end
+   
+    t+=1
+    animate(p)
+    update_enemies()
+    update_player()
+    update_fx()
+  end
+  if p.health < 0 then
+    mode=2
+  end
 end
 
 function _draw()
   rectfill(0,0,64,64,1)
 
-  for item in all(saber_cache) do
-    pset(item[1],item[2],saber_cache_colors[1+flr(rnd(#saber_cache_colors))])
-    item[3]-=1
-    if item[3]<=0 then
-      del(saber_cache,item)
+  if mode==0 then
+    print("set fire to the", 2, 10,7)
+    print("empire", 20, 20, 7)
+    print("press z to start", 0, 55, 7)
+  elseif mode == 2 then
+    print("you set fire to ", 2, 10, 7)
+    print("the empire!", 7, 18, 7)
+    print("score: "..score, 15, 33, 7)
+    print("press z", 15, 48, 7)
+    print("to restart", 12, 55, 7)
+  elseif mode == 1 then
+    for item in all(saber_cache) do
+      pset(item[1],item[2],saber_cache_colors[1+flr(rnd(#saber_cache_colors))])
+      item[3]-=1
+      if item[3]<=0 then
+        del(saber_cache,item)
+      end
     end
-  end
 
-  for enemy in all(enemies) do
-    if enemy.type=="laser" then
-      spr(enemy_sprs[enemy.type],
-          enemy.x, enemy.y, 1,1,(enemy.dx>1),false)
-      --sparkly laser fx
-      for i=enemy.x,enemy.x+7 do
-        for j=enemy.y,enemy.y+7 do
-          if pget(i,j) == 8 or pget(i,j) == 7 or pget(i,j) == 14 then
-            pset(i,j,laser_colors[1+flr(rnd(3))])
+    for enemy in all(enemies) do
+      if enemy.type=="laser" then
+        spr(enemy_sprs[enemy.type],
+            enemy.x, enemy.y, 1,1,(enemy.dx>1),false)
+        --sparkly laser fx
+        for i=enemy.x,enemy.x+7 do
+          for j=enemy.y,enemy.y+7 do
+            if pget(i,j) == 8 or pget(i,j) == 7 or pget(i,j) == 14 then
+              pset(i,j,laser_colors[1+flr(rnd(3))])
+            end
           end
         end
+      else
+        palt(0, false)
+        palt(1, true)
+        spr(enemy.sprites[enemy.state].sprites[enemy.frame+1],
+            enemy.x,enemy.y,1,1,(enemy.flip=="t"),false)
+        palt()
       end
-    else
-      palt(0, false)
-      palt(1, true)
-      spr(enemy.sprites[enemy.state].sprites[enemy.frame+1],
-          enemy.x,enemy.y,1,1,(enemy.flip=="t"),false)
-      palt()
+      -- draw enemy hitbox in red
+      if show_hitbox then
+        rect(enemy.x+enemy.hbox.xmod,enemy.y+enemy.hbox.ymod,
+            enemy.x+enemy.hbox.xmod+enemy.hbox.w,
+            enemy.y+enemy.hbox.ymod+enemy.hbox.h,8)
+      end
+    end
+    -- draw fx
+    for f in all(fx) do
+      pset(f.x,f.y,f.c)
+    end
+    -- debug
+
+    print(p.frame+1,0,0,7)
+    print(p.state,0,10,7)
+    print(t,0,20,7)
+    print(p.deflectdelay,0,24,7)
+    -- draw player hitbox in red
+    if show_hitbox<1 then
+      rect(p.x+p.hbox[p.state][p.flip].xmod,p.y+p.hbox[p.state][p.flip].ymod,
+          p.x+p.hbox[p.state][p.flip].xmod+p.hbox[p.state][p.flip].w,
+          p.y+p.hbox[p.state][p.flip].ymod+p.hbox[p.state][p.flip].h,8)
     end
 
-  end
-  -- draw fx
-  for f in all(fx) do
-    pset(f.x,f.y,f.c)
-  end
-  -- debug
-  --[[
-  print(p.frame+1,0,0,7)
-  print(p.state,0,10,7)
-  print(t,0,20,7)
-  print(p.deflectdelay,0,24,7)
-  -- draw player hitbox in red
-  if show_hitbox<1 then
-    rect(p.x+p.hbox[p.state][p.flip].xmod,p.y+p.hbox[p.state][p.flip].ymod,
-        p.x+p.hbox[p.state][p.flip].xmod+p.hbox[p.state][p.flip].w,
-        p.y+p.hbox[p.state][p.flip].ymod+p.hbox[p.state][p.flip].h,8)
-  end
-  -- draw enemy hitbox in red
-  if show_hitbox then
-    rect(enemy.x+enemy.hbox.xmod,enemy.y+enemy.hbox.ymod,
-        enemy.x+enemy.hbox.xmod+enemy.hbox.w,
-        enemy.y+enemy.hbox.ymod+enemy.hbox.h,8)
-  end
-  --]]
-  -- draw player
-  spr(p.sprites[p.state].sprites[p.frame+1],
-      p.x,p.y,1,1,(p.flip=="t"),false)
-  -- sparkly lightsaber fx
-  for i=p.x,p.x+7 do
-    for j=p.y,p.y+7 do
-      if pget(i,j) == 12 or pget(i,j) == 7 or pget(i,j) == 6 then
-        pset(i,j,saber_colors[1+flr(rnd(3))])
-      end
-    end
-  end
+   -- end debug
 
-  -- saber cache fx
-  for i=p.x,p.x+7 do
-    for j=p.y,p.y+7 do
-      if pget(i,j) == 12 or pget(i,j) == 7 or pget(i,j) == 6 then
-        add(saber_cache,{i,j,7})
+    -- draw player
+    spr(p.sprites[p.state].sprites[p.frame+1],
+        p.x,p.y,1,1,(p.flip=="t"),false)
+    -- sparkly lightsaber fx
+    for i=p.x,p.x+7 do
+      for j=p.y,p.y+7 do
+        if pget(i,j) == 12 or pget(i,j) == 7 or pget(i,j) == 6 then
+          pset(i,j,saber_colors[1+flr(rnd(3))])
+        end
       end
     end
+
+    -- saber cache fx
+    for i=p.x,p.x+7 do
+      for j=p.y,p.y+7 do
+        if pget(i,j) == 12 or pget(i,j) == 7 or pget(i,j) == 6 then
+          add(saber_cache,{i,j,7})
+        end
+      end
+    end
+  print("health:"..p.health,2,2,7)
+
   end
 end
 
@@ -233,11 +271,12 @@ function update_enemies()
     if flr(rnd(2)) == 0 then
     new_enemy={x=64,y=32,dx=-0.1, state="walking",
                dy=0,type="stormtrooper",t=0,frame=0,
-               hbox={xmod=3,ymod=2,w=2,h=0}}
+               hbox={xmod=2,ymod=0,w=3,h=8}}
     else
       new_enemy={x=0,y=32,dx=0.1, state="walking",
                  dy=0,type="stormtrooper",t=0,frame=0,
-                 hbox={xmod=3,ymod=2,w=2,h=0}}
+                 flip="t",
+                 hbox={xmod=2,ymod=0,w=3,h=8}}
     end
     new_enemy.sprites = enemy_sprs[new_enemy.type].sprites
     new_enemy.step = enemy_sprs[new_enemy.type].step
@@ -269,6 +308,7 @@ function update_enemies()
           p.deflectdelay=7
           enemy_die(enemy)
         else
+          enemy_die(enemy)
           p.health-=1
         end
       end
