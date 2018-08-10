@@ -4,7 +4,7 @@ __lua__
 poke(0x5f2c,3) -- set resolution to 64x64
 
 
--- todo combo system omg freal
+-- todo combo system omg freal ( for slashing? build up foes one side then slash them down)
 -- jump attack
 -- jump defend from above
 -- powerups
@@ -195,7 +195,7 @@ function _draw()
         palt()
       end
       -- draw enemy hitbox in red
-      if show_hitbox then
+      if show_hitbox<1 then
         rect(enemy.x+enemy.hbox.xmod,enemy.y+enemy.hbox.ymod,
             enemy.x+enemy.hbox.xmod+enemy.hbox.w,
             enemy.y+enemy.hbox.ymod+enemy.hbox.h,8)
