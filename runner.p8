@@ -16,6 +16,7 @@ function _init()
  saber_colors={12,7,6}
  laser_colors={8,7,14}
  saber_cache_colors={13,2,1}
+ laser_fx_colors={12,7,6,12,6,1,2,1,13,1,1}
  saber_cache={}
  p={
     t=0,
@@ -49,8 +50,8 @@ function _init()
         t={xmod=0,ymod=1,w=7,h=7}        
       },
       dash={
-        f={xmod=0,ymod=1,w=7,h=7},
-        t={xmod=0,ymod=1,w=7,h=7}
+        f={xmod=0,ymod=1,w=64,h=7},
+        t={xmod=0,ymod=1,w=-64,h=7}
       }
     },
     sprites={
@@ -74,7 +75,7 @@ function _init()
         step=1,
         sprites={39,40,41},
       },
-      dash={step=2,
+      dash={step=5,
         sprites={9,10,11,12,13,14,15,28,29}  
       }
     }
@@ -91,16 +92,21 @@ function _init()
           --sprites={80,81,82,83,84,85,86,87,88,89}
           --sprites={112,113,114,115}
           sprites={96,97,98,99,100,101,102,103}
+        },
+        dying={
+          step=6,
+          sprites={}
         }
       }
     }
  }
-
+ delays = {}
  fx={}
 end
 
 function _update()
   t+=1
+  printh("t:"..t)
   if mode == 0 then  -- title
     if btnp(4) then
       _init()
@@ -124,13 +130,18 @@ function _update()
     elseif p.state=="running" then
       p.state="idle"
       p.frame=0
-    elseif btnp(4) and btnp(5) and p.state != "dash" then
+    elseif btn(4) and btn(5) and p.state != "dash" then
       -- do the slash attack thing
       p.state="dash"
       p.frame=0
-      -- kill all enemies in path
       -- do cool fx
-      printh("DASH NOW")
+      if p.flip == "f" then
+        newpx = min(p.x+40, 56)
+      else
+        newpx = max(p.x-40, 0)
+      end
+      -- kill all enemies in path
+      delay(dash_fx,{startx=p.x,finishx=newpx,y=p.y},.5)
     elseif btnp(4) and p.state != "fighting" then
       p.state="fighting"
       p.frame=0
@@ -148,12 +159,14 @@ function _update()
     end
     if p.state=="dash" and p.frame>2 then
       if p.flip == "f" then
-        p.x = min(p.x+40, 56)
+        newpx = min(p.x+40, 56)
       else
-        p.x = max(p.x-40, 10)
+        newpx = max(p.x-40, 0)
       end
+      p.x=newpx
+
     end
-    if p.state=="dash" and p.frame>=#p.sprites.dash.sprites then
+    if p.state=="dash" and p.frame>=#p.sprites.dash.sprites-1 then
       p.state="idle"
       p.frame=0
     end
@@ -172,6 +185,7 @@ function _update()
     update_enemies()
     update_player()
     update_fx()
+    update_delays()
   end
   if p.health < 0 then
     mode=2
@@ -231,8 +245,8 @@ function _draw()
       pset(f.x,f.y,f.c)
     end
     -- debug
-
-    print(p.frame+1,0,0,7)
+    print(p.x,0,0.7)
+    --print(p.frame+1,0,0,7)
     print(p.state,0,10,7)
     print(t,0,20,7)
     print(p.deflectdelay,0,24,7)
@@ -281,6 +295,7 @@ end
 function update_enemies()
   -- check if new enemies should be created
   if t%100 == 0 then
+    --[[
     if flr(rnd(2)) == 0 then
       add(enemies,{x=100,y=32,dx=-1,
                    dy=0,type="laser",t=0,
@@ -291,7 +306,9 @@ function update_enemies()
                    dy=0,type="laser",t=0,
                    hbox={xmod=3,ymod=2,w=2,h=0},
                    reflected=false})
+    
     end
+    --]]
   elseif t%80 == 0 then
     if flr(rnd(2)) == 0 then
     new_enemy={x=64,y=32,dx=-0.1, state="walking",
@@ -326,6 +343,12 @@ function update_enemies()
        w=enemy.hbox.w,
        h=enemy.hbox.h}
     ) then
+      if enemy.type == "stormtrooper" and p.state == "dash" then
+        enemy.state = "dying"
+        delay(enemy_die, enemy, .5)
+        delay(explody_fx, enemy, .25)
+        --enemy_die(enemy)
+      end
       if enemy.type == "laser" then
         if p.state=="fighting" then
           -- enemy laser dies!
@@ -334,7 +357,7 @@ function update_enemies()
           enemy_die(enemy)
         else
           enemy_die(enemy)
-          p.health-=1
+          --p.health-=1
         end
       end
     end
@@ -399,6 +422,12 @@ function gravity_update(f)
   f.y+=f.dy
 end
 
+function laser_update(f)
+  f.c=laser_fx_colors[1+flr(rnd(#laser_fx_colors))]
+  f.y+=f.dy
+  f.x+=f.dx*flr(rnd(1))
+end
+
 function check_collision(thing1, thing2)
   if thing1.x <= thing2.x+thing2.w and
      thing1.x+thing1.w >= thing2.x and
@@ -430,6 +459,68 @@ function explody_fx(enemy)
         update=gravity_update,
         ttl=100,
       })
+  end
+end
+function dash_fx(obj)
+  local beginx=obj.startx
+  obj.startx = flr(obj.startx)
+  obj.finishx = flr(obj.finishx)
+  printh("new dashfx ttl: "..min(obj.beginx,obj.finishx)*15)
+  while obj.startx != obj.finishx do
+    --printh("startx:"..obj.startx.." finishx:"..obj.finishx)
+    for k=2,8 do
+      add(fx,
+        {
+          x=obj.startx,y=obj.y+k,
+          dy=rnd(1)*-1,
+          dx=flr(rnd(2))*flr(rnd(2)),
+          c=laser_fx_colors[1+flr(rnd(#laser_fx_colors))],
+          update=laser_update,
+          ttl=rnd(5)*rnd(2)+min(obj.beginx,obj.finishx)
+        }
+      )      
+    end
+    if obj.startx<obj.finishx then
+      obj.startx+=1
+    else
+      obj.startx-=1
+    end
+  end
+  --[[
+  printh(startx,finishx,y)
+  for k=2,8 do
+    for i=startx,finishx+8 do
+      add(fx,
+        {
+          x=i,y=y+k,
+          dy=rnd(1)*-1,
+          dx=sin(i/5)/5,
+          c=laser_fx_colors[1+flr(rnd(#laser_fx_colors))],
+          update=laser_update,
+          ttl=i/5
+        }
+      )
+    end
+  end
+  --]]
+end
+
+function delay(orig_fun, orig_obj, ttl)
+  add(delays, 
+      {
+        ttl=ttl*30,
+        f=orig_fun,
+        obj=orig_obj
+       }
+  )
+end
+function update_delays()
+  for delay in all(delays) do
+    delay.ttl-=1
+    if delay.ttl<=0 then
+      delay.f(delay.obj)
+      del(delays, delay)
+    end
   end
 end
 
