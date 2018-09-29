@@ -10,6 +10,8 @@ neighbors = {
   {0, 1}
 }
 matches = {}
+animations = {}
+falling_spd=1
 function _init()
   sprs = {1,2,3,17,18,19,33}
   board = new_board()
@@ -31,10 +33,25 @@ function _draw()
   cls()
   draw_board()
   spr(0,stat(32),stat(33))
+  --for anim in all(animations) do
+  --  spr(anim[2].x, anim[2].y, anim[2].spr)
+  --end
+  print_board()
 end
 
 function _update()
   do_clicks()
+  for row=1,board_rows+1 do
+    for col=1,board_cols+1 do
+      do_fall(board, row, col)
+    end
+  end
+   for col=1,board_cols+1 do
+     if board[1][col]==0 then
+       board[1][col] = sprs[flr(rnd(#sprs))+1]
+     end
+  end
+  animate()
 end
 
 function do_matches(board)
@@ -44,7 +61,7 @@ function do_matches(board)
     end
   end
   matches = {}
-  printh("========================END DO MATCHES==============================")
+  printh("========================end do matches==============================")
 end
 
 function find_and_check_neighbors(board, checked_neighbors, row, col)
@@ -59,7 +76,8 @@ function find_and_check_neighbors(board, checked_neighbors, row, col)
     add(checked_neighbors, {row+neighbor[1], col+neighbor[2]})
     printh("added "..row+neighbor[1].." "..col+neighbor[2].." to checked neighbors")
 
-    if (not checked and row+neighbor[1] >= 1) and 
+    if (val != 0) and 
+        (not checked and row+neighbor[1] >= 1) and 
        (row+neighbor[1] <= board_rows+1) and
        (col+neighbor[2] >= 1) and
        (col+neighbor[2] <= board_cols+1) and
@@ -84,7 +102,7 @@ function do_matches_faster(board, row, col)
     end
   end
   matches = {}
-  printh("========================END DO MATCHES==============================")
+  printh("========================end do matches==============================")
 end
 
 function do_clicks()
@@ -106,7 +124,7 @@ function do_clicks()
       board[selected[2]][selected[1]] = tmp
       
       do_matches_faster(board,row,col)
-      printh("======NEXT ONE=======")
+      printh("======next one=======")
       do_matches_faster(board,selected[2], selected[1])
       selected={-1,-1}
 
@@ -130,6 +148,16 @@ function new_board()
     printh(debugstr)
   end
   return board
+end
+
+function print_board()
+  for i=1,board_cols+1 do
+    debugstr = ""
+    for j=1,board_rows+1 do
+      debugstr = debugstr..", "..board[i][j]
+    end
+    printh(debugstr)
+  end
 end
 
 function draw_board()
@@ -157,6 +185,49 @@ function draw_board()
          ((selected[1]+2)*12)-2,
          ((selected[2]+2)*12)-2, 11)
   end
+end
+
+function do_fall(board, row, col)
+  -- check below yourself, if you can fall, move down
+  -- do an animation, with callback to actuall do fall
+  -- check every spot for objects that need to fall, apply fall to it
+  board[row][col] = 0
+  local ymod = 0
+  while ymod + row < board_rows and board[row+ymod][col] == 0 do
+    --printh("do_fall row "..row.." col "..col.." ymod "..ymod)
+    ymod +=1
+  end
+  ymod-=1 -- back up
+  -- calc ttl, newrow, newcol
+  if ymod > 0 then
+    animation(fall, {x=col*12, y=row*12, spr=board[row][col], ttl=(15*ymod)}, move_ghoul, {row, col, row+ymod, col})
+  end
+end
+
+function fall(falling_obj)
+  falling_obj.y+=falling_spd
+end
+
+function animation(animation_fn, animation_obj, callback, callback_arg)
+  add(animations, {animation_fn, animation_obj, callback, callback_arg})
+end
+
+function animate()
+  for animation in all(animations) do
+    if animation[2].ttl>0 then
+      animation[1](animation[2])
+      animation[2].ttl-=1
+    else
+      animation[3](animation[4])
+      del(animations, animation)
+    end
+  end
+end
+
+function move_ghoul(ghoulmov)
+  printh("called move ghoul!".." row "..ghoulmov[1].." col "..ghoulmov[2].." to "..ghoulmov[3].." "..ghoulmov[4])
+  board[ghoulmov[3]][ghoulmov[4]] = board[ghoulmov[1]][ghoulmov[2]]
+  board[ghoulmov[1]][ghoulmov[2]] = 0
 end
 
 function check_coords_exist(arr, item)
