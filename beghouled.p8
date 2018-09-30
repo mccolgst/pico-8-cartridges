@@ -9,12 +9,17 @@ neighbors = {
   {0, -1},
   {0, 1}
 }
+moving_ghouls = false
 matches = {}
 animations = {}
+falling_objects = {}
+fx = {}
 falling_spd=1
+screenshake = {x=0, y=0}
 function _init()
   sprs = {1,2,3,17,18,19,33}
   board = new_board()
+  last_board = board
   poke(0x5f2d,1)
   clicked=false
   -- stat(32) x
@@ -26,83 +31,106 @@ function _init()
   printh(#board[1])
   printh(board[1][1])
   printh(board[7][7])
-  do_matches(board)
+  do_matches_optimized(board)
 end
 
 function _draw()
   cls()
   draw_board()
-  spr(0,stat(32),stat(33))
-  --for anim in all(animations) do
-  --  spr(anim[2].x, anim[2].y, anim[2].spr)
-  --end
-  print_board()
+  spr(4,stat(32),stat(33))
+  draw_fx()
+  --print_board()
+  print(stat(1), 60, 120,8)
 end
 
 function _update()
   do_clicks()
+  do_matches_optimized(board)
+  update_fx()
+  for col=1,board_cols+1 do
+    if board[1][col]==0 then
+      board[1][col] = sprs[flr(rnd(#sprs))+1]
+    end
+  end
   for row=1,board_rows+1 do
     for col=1,board_cols+1 do
-      do_fall(board, row, col)
+      if not moving_ghouls then
+        do_fall(board, row, col)
+      end
     end
   end
-   for col=1,board_cols+1 do
-     if board[1][col]==0 then
-       board[1][col] = sprs[flr(rnd(#sprs))+1]
-     end
-  end
-  animate()
+  --animate()
+  screenshake.x-=1
+  screenshake.y-=1
+  screenshake.x=max(screenshake.x, 0)
+  screenshake.y=max(screenshake.y, 0)
+  t+=1
+  move_ghouls()
+  printh("update "..t)
 end
 
-function do_matches(board)
-  for i=1,board_rows do
-    for j=1,board_cols do
-      do_matches_faster(board, i,j)
-    end
+
+function safe_get_ghoul(board, row, col)
+  if row > 0 and
+     row <= board_rows+1 and
+     col > 0 and
+     col <= board_cols+1 then
+     return board[row][col]
+  else
+    return false
   end
-  matches = {}
-  printh("========================end do matches==============================")
 end
 
-function find_and_check_neighbors(board, checked_neighbors, row, col)
-  local checked = false
-  printh("called find and check neighbors with "..row.." "..col)
-  local val = board[row][col]
-  printh("val is "..val)
-
-  for neighbor in all(neighbors) do
-    printh("now checking "..row+neighbor[1].." "..col+neighbor[2])
-      checked = check_coords_exist(checked_neighbors, {row+neighbor[1], col+neighbor[2]})
-    add(checked_neighbors, {row+neighbor[1], col+neighbor[2]})
-    printh("added "..row+neighbor[1].." "..col+neighbor[2].." to checked neighbors")
-
-    if (val != 0) and 
-        (not checked and row+neighbor[1] >= 1) and 
-       (row+neighbor[1] <= board_rows+1) and
-       (col+neighbor[2] >= 1) and
-       (col+neighbor[2] <= board_cols+1) and
-       (board[row+neighbor[1]][col+neighbor[2]] == val) then
-      printh("matched "..row+neighbor[1].." "..col+neighbor[2])
-      add(matches, {row+neighbor[1], col+neighbor[2]})
-      find_and_check_neighbors(board, checked_neighbors, row+neighbor[1], col+neighbor[2])
-
+function do_matches_optimized(board)
+  matched_ghouls = {}
+  for row=1,board_rows+1 do
+    for col=1,board_cols+1 do
+      ghoul_to_match = safe_get_ghoul(board,row,col)
+      if ghoul_to_match != 0 then
+        -- check to the right
+        if safe_get_ghoul(board,row,col+1)==ghoul_to_match and
+          safe_get_ghoul(board,row,col+2)==ghoul_to_match then
+          xmod = 1
+          add(matched_ghouls, {row, col})
+          while safe_get_ghoul(board,row,col+xmod)==ghoul_to_match do
+            add(matched_ghouls, {row, col+xmod})
+            xmod+=1
+          end
+        end
+        -- check to the down
+        if safe_get_ghoul(board,row+1,col)==ghoul_to_match and
+          safe_get_ghoul(board,row+2,col)==ghoul_to_match then
+          ymod = 1
+          add(matched_ghouls, {row, col})
+          while safe_get_ghoul(board,row+ymod,col)==ghoul_to_match do
+            add(matched_ghouls, {row+ymod, col})
+            ymod+=1
+          end
+        end
+      end
     end
   end
-  printh("=!!== end check neighbor =!!==")
+  for ghoul in all(matched_ghouls) do
+    --board[ghoul[1]][ghoul[2]] = 0
+    --lineup(ghoul)
+    boom(ghoul)
+    board[ghoul[1]][ghoul[2]] = 0
+  end
 end
 
-function do_matches_faster(board, row, col)
-  find_and_check_neighbors(board, {}, row, col)
-  if matches != nil and #matches >= 3 then
-    board[row][col] = 0
-    for match in all(matches) do
-      printh("attempting to delete match ".. match[1].." "..match[2])
-      --del(board, board[match[1]][match[2]])
-      board[match[1]][match[2]] = 0
+function lineup(ghoul)
+  local ti=10
+  while ti>0 do
+    for i=0,12 do
+      local xmod=rnd(2)
+      local ymod=rnd(2)
+      if flr(rnd(2))==0 then xmod*=-1 end
+      if flr(rnd(2))==0 then ymod*=-1 end
+      spr(board[ghoul[1]][ghoul[2]],(ghoul[2]*12)+xmod,(ghoul[1]*12)+ymod)
     end
+    ti-=1
+    --flip()
   end
-  matches = {}
-  printh("========================end do matches==============================")
 end
 
 function do_clicks()
@@ -123,14 +151,11 @@ function do_clicks()
       board[row][col] = board[selected[2]][selected[1]]
       board[selected[2]][selected[1]] = tmp
       
-      do_matches_faster(board,row,col)
       printh("======next one=======")
-      do_matches_faster(board,selected[2], selected[1])
       selected={-1,-1}
 
     end
   end
-  t+=1
   if t%30 == 0 then
     clicked=false
   end
@@ -162,17 +187,21 @@ end
 
 function draw_board()
   modx=0
+  local screenshakex = screenshake.x
+  local screenshakey = screenshake.y
+  if flr(rnd(2)) == 0 then screenshakex*=-1 end
+  if flr(rnd(2)) == 0 then screenshakey*=-1 end
   for i=1,board_cols+1 do
     for j=1,board_rows+1 do
       --printh("debug i + j "..i.." + "..j.." = "..(i+j).." mod2 "..((i+j)%2))
       if (i+j)%2==0 then
         for k=-2,9 do
           for l=-2,9 do
-            pset(j*12+k, i*12+l, 1)
+            pset(j*12+k+screenshakex, i*12+l+screenshakey, 1)
           end
         end
       end
-      spr(board[i][j],j*12,i*12)
+      spr(board[i][j],j*12+screenshakex,i*12+screenshakey)
     end
   end
   if selected[1] >=0 then
@@ -180,10 +209,6 @@ function draw_board()
          (selected[2]*12)-2,
          (selected[1]*12)+10,
          (selected[2]*12)+10,8)
-    rect(((selected[1]-1)*12)-2,
-         ((selected[2]-1)*12)-2,
-         ((selected[1]+2)*12)-2,
-         ((selected[2]+2)*12)-2, 11)
   end
 end
 
@@ -191,21 +216,71 @@ function do_fall(board, row, col)
   -- check below yourself, if you can fall, move down
   -- do an animation, with callback to actuall do fall
   -- check every spot for objects that need to fall, apply fall to it
-  board[row][col] = 0
-  local ymod = 0
-  while ymod + row < board_rows and board[row+ymod][col] == 0 do
-    --printh("do_fall row "..row.." col "..col.." ymod "..ymod)
+  --board[row][col] = 0
+  local ymod = 1
+  while (ymod + row) < board_rows+2 and board[row+ymod][col] == 0 do
     ymod +=1
   end
   ymod-=1 -- back up
-  -- calc ttl, newrow, newcol
-  if ymod > 0 then
-    animation(fall, {x=col*12, y=row*12, spr=board[row][col], ttl=(15*ymod)}, move_ghoul, {row, col, row+ymod, col})
+  if ymod > 0 and board[row][col] != 0 then
+    add(falling_objects, {row, col, row+ymod, col})
+    -- also add everything above it
+    newymod = ymod
+    while row-newymod > 0 do
+      if safe_get_ghoul(board,row-newymod+1, col) != nil and
+         safe_get_ghoul(board,row-newymod+1, col) != 0 then
+        printh("row-newymod "..(row-newymod).." col "..col.." row+ymod "..(row+ymod).." col "..col)
+        add(falling_objects, {(row-newymod)+1, col, row+ymod, col})
+        newymod+=1
+      end
+    end
+    --move_ghoul({row, col, row+ymod, col})
+    --board[row][col] = 0
+
+    --animation(fall, {x=col*12, y=row*12, spr=board[row][col], ttl=(15*ymod)},
+    --          move_ghoul, {row, col, row+ymod, col})
   end
 end
 
 function fall(falling_obj)
   falling_obj.y+=falling_spd
+end
+
+function boom(boom_spot)
+  local dx=rnd(5)
+  local cols = {1,2,3,6,13}
+  local c=cols[flr(rnd(#cols))+1]
+  if flr(rnd(2)) == 0 then
+    dx*=-1
+  end
+  add(fx, {type="boom",dx=dx, c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
+  add(fx, {type="boom",dx=dx+rnd(3), c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
+  add(fx, {type="boom",dx=dx+rnd(3), c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
+  screenshake.x+=rnd(2)
+  screenshake.y+=rnd(2)
+end
+
+function explode(f)
+  f.r+=f.dx
+  f.ttl-=1
+  if f.ttl<=0 then del(fx, f) end
+end
+
+function update_fx()
+  for ef in all(fx) do
+    ef.f(ef)
+  end
+end
+
+function draw_fx()
+  for ef in all(fx) do
+    if ef.type=="boom" then
+      circ(ef.x, ef.y, ef.r, ef.c)
+    end
+  end
+end
+
+function do_nothing(parm)
 end
 
 function animation(animation_fn, animation_obj, callback, callback_arg)
@@ -224,10 +299,40 @@ function animate()
   end
 end
 
-function move_ghoul(ghoulmov)
-  printh("called move ghoul!".." row "..ghoulmov[1].." col "..ghoulmov[2].." to "..ghoulmov[3].." "..ghoulmov[4])
-  board[ghoulmov[3]][ghoulmov[4]] = board[ghoulmov[1]][ghoulmov[2]]
-  board[ghoulmov[1]][ghoulmov[2]] = 0
+function move_ghouls()
+  printh("move ghouls "..#falling_objects)
+  moving_ghouls = true
+  if #falling_objects>0 then
+    local ti=6
+    while ti>0 do
+      cls()
+      printh(ti)
+      update_fx()
+      draw_board()
+      screenshake.x-=1
+      screenshake.y-=1
+      screenshake.y=max(screenshake.y,0)
+      screenshake.x=max(screenshake.x,0)
+      draw_fx()
+
+      for ghoul in all(falling_objects) do
+        spr(board[ghoul[1]][ghoul[2]], ghoul[2]*12, (ghoul[1]*12)+12-(ti*(abs(ghoul[1]-ghoul[3]))))
+        --flip()
+
+      end
+      flip()
+      ti-=1
+
+    end
+    --printh("called move ghoul!".." row "..ghoulmov[1].." col "..ghoulmov[2].." to "..ghoulmov[3].." "..ghoulmov[4])
+    --flip()
+  end
+  for ghoul in all(falling_objects) do
+    board[ghoul[3]][ghoul[4]] = board[ghoul[1]][ghoul[2]]
+    board[ghoul[1]][ghoul[2]] = 0
+    del(falling_objects, ghoul)
+  end
+  moving_ghouls = false
 end
 
 function check_coords_exist(arr, item)
@@ -241,18 +346,18 @@ function is_valid_selection(oldcol, oldrow, newcol, newrow)
   return abs(newcol - oldcol) + abs(newrow - oldrow) <= 1
 end
 __gfx__
-000000000000b300000ddd0000000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000b300000ddddd000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-007007000a9999400dd0d0dd50555005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00088000a9d999140d00d00d55555505000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00088000a9dd91140ddddddd55555550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00700700999999940dd000dd05000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000000b300000eed0000000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000b300000eeddd000000005000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000a9999400eecdcdd50555005007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000a9d999140eccdccd55555505000880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000a9dd91140edddddd55555550000880000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000999999940edcccdd05000050007007000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 0000000099ddd1940ddddddd05000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000099999400d0d0d0d05000050000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000000000007770007777000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 00000000000007770077777077666600000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-00000000000999770770707776000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
-000000000a9999960700700750000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+00000000000999770778787776000060000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
+000000000a9999960788788750000006000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000aa999900777077705000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000aaa99400077777000550000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
 000000000aaa94000070707000005500000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000
