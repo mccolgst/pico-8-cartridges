@@ -107,6 +107,7 @@ function _update()
   if mode==1 then
     hint_timer-=1
     if hint_timer<=0 then
+      last_board = copy_board(board)
       hint_timer=30*5
       hint_spots = get_hint_spot(board)
       for hint in all(hint_spots) do
@@ -235,6 +236,7 @@ function do_matches_optimized(board)
 end
 
 function do_clicks()
+
   if clicked==false and stat(34) == 1 then
     clicked=true
     x=stat(32)
@@ -242,11 +244,11 @@ function do_clicks()
     col=flr(((x+4)/12))
     row=flr(((y+4)/12))
     sfx(20)
-    if selected[1]==-1 then
+    if selected[1]==-1 and col<=8 and col>=1 and row<=8 and row>=1 then
       selected={flr(col),flr(row)}
       printh(x.." "..y)
       printh(flr(selected[1]).." "..flr(selected[2]))
-    elseif is_valid_selection(selected[1], selected[2], col, row) then
+    elseif is_valid_selection(selected[1], selected[2], col, row) and col<=8 and col>=1 and row<=8 and row>=1 then
       sfx(20)
       local dy = (row - selected[2])
       local dx = (col - selected[1])
