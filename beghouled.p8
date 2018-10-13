@@ -19,7 +19,7 @@ delayed_actions = {}
 falling_spd=1
 screenshake = {x=0, y=0}
 score=0
-mode=3
+mode=0
 hint_timer=30*5
 function _init()
   sprs = {1,2,3,17,18,19,33}
@@ -32,10 +32,6 @@ function _init()
   -- stat(34) click
   selected = {-1,-1}
   t=0
-  printh(#board)
-  printh(#board[1])
-  printh(board[1][1])
-  printh(board[7][7])
   do_matches_optimized(board)
 end
 
@@ -44,16 +40,14 @@ function _draw()
   if mode==1 then
     cls()
     if #falling_objects == 0 and #moving_objects == 0 and #glowy_bois == 0 then
-      printh("#falling "..#falling_objects.." #moving "..#moving_objects)
       draw_board(board)
     else
-      printh("draw last board #falling "..#falling_objects.." #moving "..#moving_objects)
       draw_board(last_board)
     end
     spr(4,stat(32),stat(33))
     draw_fx()
     --print_board()
-    print(stat(1), 60, 120,8)
+    --print(stat(1), 60, 120,8)
     for ghoul in all(falling_objects) do
       --spr(board[ghoul.row][ghoul.col], ghoul.col*12, (ghoul.row*12)+12-(ghoul.t*(abs(ghoul.row-ghoul.newrow))))
       spr(board[ghoul.row][ghoul.col], ghoul.col*12, ghoul.y)
@@ -73,11 +67,29 @@ function _draw()
         if flr(rnd(2))==0 then
           dy*=-1
         end
-
+        for l=0,15 do
+          pal(l,0)
+        end
+        for j=-1,1 do
+          for k=-1,1 do
+            spr(glowy_boi.spr, glowy_boi.col*12+dx+j,glowy_boi.row*12+dy+j)
+          end
+        end
+        pal()
         spr(glowy_boi.spr, glowy_boi.col*12+dx,glowy_boi.row*12+dy)
+
       end
     end
-    print("score: "..score,0,120,8)
+    for i=0,15 do
+      pal(i,2)
+    end
+    for i=-1,1 do
+      for k=-1,1 do 
+        print("score: "..score,40+i,110+k,13)
+      end
+    end
+    pal()
+    print("score: "..score,40,110,14)
   elseif mode==0 then
     rectfill(0,0,128,128,1)
     spr(25, 32, 54)
@@ -134,7 +146,7 @@ function _update()
     screenshake.x=min(3,screenshake.x)
     screenshake.y=min(3,screenshake.y)
     t+=1
-    if is_game_over(board) then
+    if #falling_objects == 0 and #moving_objects == 0 and #glowy_bois == 0 and is_game_over(board) then
       mode=3
     end
     move_ghouls()
