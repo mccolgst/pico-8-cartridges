@@ -19,7 +19,8 @@ delayed_actions = {}
 falling_spd=1
 screenshake = {x=0, y=0}
 score=0
-mode=1
+mode=3
+hint_timer=30*5
 function _init()
   sprs = {1,2,3,17,18,19,33}
   board = new_board()
@@ -39,6 +40,7 @@ function _init()
 end
 
 function _draw()
+  cls()
   if mode==1 then
     cls()
     if #falling_objects == 0 and #moving_objects == 0 and #glowy_bois == 0 then
@@ -76,15 +78,33 @@ function _draw()
       end
     end
     print("score: "..score,0,120,8)
+  elseif mode==0 then
+    rectfill(0,0,128,128,1)
+    spr(25, 32, 54)
+    spr(41, 40, 54, 7,1)
+    print("x to start",44,84,7)
   elseif mode==3 then
-    print("game over!",64,64)
-    print("score:",64,74)
-    print("x = restart", 54,84)
+    print("game over!",44,54)
+    print("score: "..score,47,74)
+    print("x = restart", 41,84)
   end
 end
 
 function _update()
   if mode==1 then
+    hint_timer-=1
+    if hint_timer<=0 then
+      hint_timer=30*5
+      hint_spots = get_hint_spot(board)
+      for hint in all(hint_spots) do
+        add(glowy_bois, 
+        {
+          row=hint.row, col=hint.col, 
+          spr=board[hint.row][hint.col],
+          ttl=25,
+        })
+      end
+    end
     do_clicks()
     update_fx()
     update_delayed_actions()
@@ -121,8 +141,10 @@ function _update()
     if #falling_objects == 0 and #moving_objects == 0 and #glowy_bois == 0 then
       do_matches_optimized(board)
     end
+  elseif mode==0 then
+    if btnp(5) then mode = 1 end
   elseif mode==3 then
-    printh('hey')
+    if btnp(5) then mode=1 _init() end
   end
 end
 
@@ -424,6 +446,7 @@ function boom(boom_spot)
   screenshake.x+=rnd(2)
   screenshake.y+=rnd(2)
   board[boom_spot[1]][boom_spot[2]] = 0
+  hint_timer=30*5
 end
 
 function explode(f)
@@ -526,6 +549,64 @@ function is_game_over(board)
     end
   end
   return true
+end
+
+function get_hint_spot(board)
+  -- eight possible patterns for a close match
+  local move_patterns = {
+    {{1,1},{1,2},{1,4}},
+    {{1,1},{1,3},{1,4}},
+    {{1,1},{2,2},{3,2}},
+    {{1,1},{2,1},{3,2}},
+    {{1,2},{2,1},{3,2}},
+    {{1,1},{2,2},{3,1}},
+    {{1,2},{2,2},{3,1}},
+    {{1,2},{2,1},{3,1}},
+  }
+  local move_patterns = {
+    {{0,0},{0,1},{0,3}},
+    {{0,0},{0,2},{0,3}},
+    {{0,0},{1,1},{2,1}},
+    {{0,0},{1,0},{2,1}},
+    {{0,1},{1,0},{2,1}},
+    {{0,0},{1,1},{2,0}},
+    {{0,1},{1,1},{2,0}},
+    {{0,1},{1,0},{2,0}},
+  }
+  -- go over every cell and look all around for this pattern,
+  -- also look in inverted pattern too
+  -- if any of them match return false
+  for row=1,board_rows+1 do
+    for col=1,board_cols+1 do
+      for pattern in all(move_patterns) do
+        if (
+          safe_get_ghoul(board, row+pattern[1][1], col+pattern[1][2]) ==
+          safe_get_ghoul(board, row+pattern[2][1], col+pattern[2][2]) and 
+          safe_get_ghoul(board, row+pattern[2][1], col+pattern[2][2]) ==
+          safe_get_ghoul(board, row+pattern[3][1], col+pattern[3][2]) and
+          safe_get_ghoul(board, row+pattern[1][1], col+pattern[1][2]) != false
+        ) then
+          return {
+            {row=row+pattern[1][1],col=col+pattern[1][2]},
+            {row=row+pattern[2][1],col=col+pattern[2][2]},
+            {row=row+pattern[3][1],col=col+pattern[3][2]},
+          }
+        elseif (
+          safe_get_ghoul(board, row+pattern[1][2], col+pattern[1][1]) ==
+          safe_get_ghoul(board, row+pattern[2][2], col+pattern[2][1]) and
+          safe_get_ghoul(board, row+pattern[2][2], col+pattern[2][1]) ==
+          safe_get_ghoul(board, row+pattern[3][2], col+pattern[3][1]) and
+          safe_get_ghoul(board, row+pattern[1][2], col+pattern[1][1]) != false
+        ) then
+          return {
+            {row=row+pattern[1][2],col=col+pattern[1][1]},
+            {row=row+pattern[2][2],col=col+pattern[2][1]},
+            {row=row+pattern[3][2],col=col+pattern[3][1]},
+          }
+        end
+      end
+    end
+  end
 end
 
 __gfx__
