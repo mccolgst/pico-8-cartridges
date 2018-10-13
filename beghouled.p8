@@ -12,9 +12,14 @@ neighbors = {
 last_board = {}
 matches = {}
 falling_objects = {}
+moving_objects = {}
+glowy_bois = {}
 fx = {}
+delayed_actions = {}
 falling_spd=1
 screenshake = {x=0, y=0}
+score=0
+mode=1
 function _init()
   sprs = {1,2,3,17,18,19,33}
   board = new_board()
@@ -34,54 +39,91 @@ function _init()
 end
 
 function _draw()
-  cls()
-  if #falling_objects == 0 then
-    draw_board(board)
-  else
-    draw_board(last_board)
-  end
-  spr(4,stat(32),stat(33))
-  draw_fx()
-  --print_board()
-  print(stat(1), 60, 120,8)
-  for ghoul in all(falling_objects) do
-    --spr(board[ghoul.row][ghoul.col], ghoul.col*12, (ghoul.row*12)+12-(ghoul.t*(abs(ghoul.row-ghoul.newrow))))
-    spr(board[ghoul.row][ghoul.col], ghoul.col*12, ghoul.y)
+  if mode==1 then
+    cls()
+    if #falling_objects == 0 and #moving_objects == 0 and #glowy_bois == 0 then
+      printh("#falling "..#falling_objects.." #moving "..#moving_objects)
+      draw_board(board)
+    else
+      printh("DRAW LAST BOARD #falling "..#falling_objects.." #moving "..#moving_objects)
+      draw_board(last_board)
+    end
+    spr(4,stat(32),stat(33))
+    draw_fx()
+    --print_board()
+    print(stat(1), 60, 120,8)
+    for ghoul in all(falling_objects) do
+      --spr(board[ghoul.row][ghoul.col], ghoul.col*12, (ghoul.row*12)+12-(ghoul.t*(abs(ghoul.row-ghoul.newrow))))
+      spr(board[ghoul.row][ghoul.col], ghoul.col*12, ghoul.y)
+    end
+    for ghoul in all(moving_objects) do
+      --spr(board[ghoul.row][ghoul.col], ghoul.col*12, (ghoul.row*12)+12-(ghoul.t*(abs(ghoul.row-ghoul.newrow))))
+      spr(ghoul.spr, ghoul.x, ghoul.y)
+    end
+    for glowy_boi in all(glowy_bois) do
+      --circfill(glowy_boi.col*12+4,glowy_boi.row*12+4,4,8)
+      for i=-1,1 do
+        local dx = rnd(2)
+        local dy = rnd(2)
+        if flr(rnd(2))==0 then
+          dx*=-1
+        end
+        if flr(rnd(2))==0 then
+          dy*=-1
+        end
+
+        spr(glowy_boi.spr, glowy_boi.col*12+dx,glowy_boi.row*12+dy)
+      end
+    end
+    print("score: "..score,0,120,8)
+  elseif mode==3 then
+    print("game over!",64,64)
+    print("score:",64,74)
+    print("x = restart", 54,84)
   end
 end
 
 function _update()
-  do_clicks()
-  update_fx()
-  for col=1,board_cols+1 do
-    if board[1][col]==0 then
-      add(falling_objects,
-        {
-          row=1, col=col,
-          t=160, dy=1, y=0,fy=12
-        }
-      )
-      board[1][col] = sprs[flr(rnd(#sprs))+1]
-      --do_fall(board, 1, col)
-    end
-  end
-  for row=1,board_rows+1 do
+  if mode==1 then
+    do_clicks()
+    update_fx()
+    update_delayed_actions()
+    update_glowy_bois()
     for col=1,board_cols+1 do
-      do_fall(board, row, col)
+      if board[1][col]==0 then
+        --add(falling_objects,
+        --  {
+        --    row=1, col=col,
+        --    t=160, dy=1, y=0,fy=12
+        --  }
+        --)
+        board[1][col] = sprs[flr(rnd(#sprs))+1]
+        --do_fall(board, 1, col)
+      end
     end
+    for row=1,board_rows+1 do
+      for col=1,board_cols+1 do
+        do_fall(board, row, col)
+      end
+    end
+    --animate()
+    screenshake.x-=1
+    screenshake.y-=1
+    screenshake.x=max(screenshake.x, 0)
+    screenshake.y=max(screenshake.y, 0)
+    screenshake.x=min(3,screenshake.x)
+    screenshake.y=min(3,screenshake.y)
+    t+=1
+    if is_game_over(board) then
+      mode=3
+    end
+    move_ghouls()
+    if #falling_objects == 0 and #moving_objects == 0 and #glowy_bois == 0 then
+      do_matches_optimized(board)
+    end
+  elseif mode==3 then
+    printh('hey')
   end
-  --animate()
-  screenshake.x-=1
-  screenshake.y-=1
-  screenshake.x=max(screenshake.x, 0)
-  screenshake.y=max(screenshake.y, 0)
-  t+=1
-  if is_game_over(board) then
-    printh("GAME OVER")
-  end
-  move_ghouls()
-  do_matches_optimized(board)
-
 end
 
 function copy_board(board_to_copy)
@@ -137,10 +179,23 @@ function do_matches_optimized(board)
   end
   for ghoul in all(matched_ghouls) do
     --board[ghoul[1]][ghoul[2]] = 0
-    boom(ghoul)
-    board[ghoul[1]][ghoul[2]] = 0
-    last_board = copy_board(board)
+    add(glowy_bois, 
+    {
+      row=ghoul[1], col=ghoul[2], 
+      spr=board[ghoul[1]][ghoul[2]],
+      ttl=15,
+    })
+    add(delayed_actions,
+    {
+      ttl=15,
+      f=boom,
+      args=ghoul
+    })
+    --boom(ghoul)
+    --board[ghoul[1]][ghoul[2]] = 0
+    --last_board = copy_board(board)
   end
+  score+=#matched_ghouls
 end
 
 function do_clicks()
@@ -155,20 +210,116 @@ function do_clicks()
       printh(x.." "..y)
       printh(flr(selected[1]).." "..flr(selected[2]))
     elseif is_valid_selection(selected[1], selected[2], col, row) then
-      -- todo, can only swap on correct areas
-      tmp = {}
-      tmp = board[row][col]
-      board[row][col] = board[selected[2]][selected[1]]
-      board[selected[2]][selected[1]] = tmp
+      local dy = (row - selected[2])
+      local dx = (col - selected[1])
+      last_board[row][col]=0
+      last_board[selected[2]][selected[1]]=0
+      add(
+        moving_objects,
+        {
+          x=col*12,
+          y=row*12,
+          ttl=12,
+          spr=board[row][col],
+          dy=dy*-1,
+          dx=dx*-1
+        }
+      )
+      add(
+        moving_objects,
+        {
+          x=selected[1]*12,
+          y=selected[2]*12,
+          ttl=12,
+          spr=board[selected[2]][selected[1]],
+          dy=dy,
+          dx=dx
+        }
+      )
+      add(delayed_actions,
+         {ttl=10,
+          f=swap_ghouls,
+          args={first={row=row,col=col},
+                second={row=selected[2],col=selected[1]},
+                final=false}})
+
       
-      printh("======next one=======")
-      selected={-1,-1}
+      --tmp = {}
+      --tmp = board[row][col]
+      --board[row][col] = board[selected[2]][selected[1]]
+      --board[selected[2]][selected[1]] = tmp
+      --printh("======next one=======")
+      --selected={-1,-1}
 
     end
   end
   if t%30 == 0 then
     clicked=false
   end
+end
+
+function update_delayed_actions()
+  for action in all(delayed_actions) do
+    action.ttl-=1
+    if action.ttl<=0 then
+      del(delayed_actions, action)
+      action.f(action.args)
+    end
+  end
+end
+
+function update_glowy_bois()
+  for glowy_boi in all(glowy_bois) do
+    glowy_boi.ttl-=1
+    if glowy_boi.ttl<=0 then
+      del(glowy_bois, glowy_boi)
+    end
+  end
+end
+
+function swap_ghouls(args)
+  local first = args.first
+  local second = args.second
+  local final = args.final
+  local tmp = {}
+  tmp = board[first.row][first.col]
+  board[first.row][first.col] = board[second.row][second.col]
+  board[second.row][second.col] = tmp
+  printh("======next one=======")
+  selected={-1,-1}
+  do_matches_optimized(board)
+  if #matched_ghouls==0 and final==false then
+      local dy = (first.row - second.row)
+      local dx = (first.col - second.col)
+      add(
+        moving_objects,
+        {
+          x=first.col*12,
+          y=first.row*12,
+          ttl=12,
+          spr=board[first.row][first.col],
+          dy=dy*-1,
+          dx=dx*-1
+        }
+      )
+      add(
+        moving_objects,
+        {
+          x=second.col*12,
+          y=second.row*12,
+          ttl=12,
+          spr=board[second.row][second.col],
+          dy=dy,
+          dx=dx
+        }
+      )
+    add(delayed_actions,
+        {ttl=10,
+        f=swap_ghouls,
+        args={first=second,
+              second=first, final=true}})
+  end
+
 end
 
 function new_board()
@@ -232,27 +383,34 @@ function do_fall(board, row, col)
   end
   ymod-=1 -- back up
   if ymod > 0 and board[row][col] != 0 then
-    add(falling_objects,
-      {
-        row=row, col=col, newrow=row+ymod, newcol=col,
-        t=160, dy=1, y=(row*12)-12,fy=(row+ymod-1)*12
-      }
-    )
-    last_board[row][col] = 0
-    board[row+ymod][col] = board[row][col]
+    -- todo check if this falling obj already exist in falling_objs
+    if already_falling(row,col) == false then
+      add(falling_objects,
+        {
+          row=row, col=col, newrow=row+ymod, newcol=col,
+          t=160, dy=1, y=(row*12)-12,fy=(row+ymod-1)*12
+        }
+      )
+      last_board[row][col] = 0
+      board[row+ymod][col] = board[row][col]
 
-    board[row][col] = 0
+      board[row][col] = 0
+    end
 
-    --last_board = copy_board(board)
+    last_board = copy_board(board)
 
     printh("row "..row.." col "..col.." newrow "..(row+ymod).." y "..((row*12)-12).." fy "..((row+ymod-1)*12))
   end
 end
 
-function fall(falling_obj)
-  falling_obj.y+=falling_spd
+function already_falling(row, col)
+  for falling_obj in all(falling_objects) do
+    if falling_obj.row == row and falling_obj.col == col then
+      return true
+    end
+  end
+  return false
 end
-
 function boom(boom_spot)
   local dx=rnd(5)
   local cols = {1,2,3,6,13}
@@ -262,9 +420,10 @@ function boom(boom_spot)
   end
   add(fx, {type="boom",dx=dx, c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
   add(fx, {type="boom",dx=dx+rnd(3), c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
-  --add(fx, {type="boom",dx=dx+rnd(3), c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
+  add(fx, {type="boom",dx=dx+rnd(3), c=c,r=0, y=boom_spot[1]*12, x=boom_spot[2]*12, ttl=20, f=explode})
   screenshake.x+=rnd(2)
   screenshake.y+=rnd(2)
+  board[boom_spot[1]][boom_spot[2]] = 0
 end
 
 function explode(f)
@@ -298,6 +457,15 @@ function move_ghouls()
       last_board = copy_board(board)
     end
   end
+  for ghoul in all(moving_objects) do
+    ghoul.x+=ghoul.dx
+    ghoul.y+=ghoul.dy
+    ghoul.ttl-=1
+    if ghoul.ttl<=0 then
+      del(moving_objects, ghoul)
+      last_board = copy_board(board)
+    end
+  end
 end
 
 function check_coords_exist(arr, item)
@@ -323,6 +491,16 @@ function is_game_over(board)
     {{1,2},{2,2},{3,1}},
     {{1,2},{2,1},{3,1}},
   }
+  local move_patterns = {
+    {{0,0},{0,1},{0,3}},
+    {{0,0},{0,2},{0,3}},
+    {{0,0},{1,1},{2,1}},
+    {{0,0},{1,0},{2,1}},
+    {{0,1},{1,0},{2,1}},
+    {{0,0},{1,1},{2,0}},
+    {{0,1},{1,1},{2,0}},
+    {{0,1},{1,0},{2,0}},
+  }
   -- go over every cell and look all around for this pattern,
   -- also look in inverted pattern too
   -- if any of them match return false
@@ -331,12 +509,16 @@ function is_game_over(board)
       for pattern in all(move_patterns) do
         if (
           safe_get_ghoul(board, row+pattern[1][1], col+pattern[1][2]) ==
+          safe_get_ghoul(board, row+pattern[2][1], col+pattern[2][2]) and 
           safe_get_ghoul(board, row+pattern[2][1], col+pattern[2][2]) ==
-          safe_get_ghoul(board, row+pattern[3][1], col+pattern[3][2]) != false
+          safe_get_ghoul(board, row+pattern[3][1], col+pattern[3][2]) and
+          safe_get_ghoul(board, row+pattern[1][1], col+pattern[1][2]) != false
         ) or (
           safe_get_ghoul(board, row+pattern[1][2], col+pattern[1][1]) ==
+          safe_get_ghoul(board, row+pattern[2][2], col+pattern[2][1]) and
           safe_get_ghoul(board, row+pattern[2][2], col+pattern[2][1]) ==
-          safe_get_ghoul(board, row+pattern[3][2], col+pattern[3][1]) != false
+          safe_get_ghoul(board, row+pattern[3][2], col+pattern[3][1]) and
+          safe_get_ghoul(board, row+pattern[1][2], col+pattern[1][1]) != false
         ) then
           return false
         end
