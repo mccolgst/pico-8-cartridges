@@ -28,9 +28,10 @@ function _init()
   msgs={
     {x=3,y=3,msg={"you can do it!"}},
     {x=11,y=3,msg={"do what now?"}},
-    {x=6,y=4,msg={"how the hell", "did I get here?"}}
+    {x=6,y=4,msg={"how in the hell", "did i get here?"}}
   }
   windows={}
+  dialogue={}
   npcs={}
 
   add_npc(6,4,{50,49})
@@ -52,14 +53,9 @@ function _draw()
   for npc in all(npcs) do
     spr(npc.s[npc.si],npc.x*8,npc.y*8)
   end
-  --for window in all(windows) do
-  --  draw_window(window)
-  --end
-  -- if there's a message to display, display it
-  show_message()
-
-  --print(#windows,110,110,7)
-  print(pressbuff,110,110,7)
+  for window in all(windows) do
+    draw_window(window)
+  end
 end
 
 function get_press()
@@ -128,17 +124,18 @@ function interact_obj(objx,objy)
       #txt[1]*4+4,
       10,
       txt,
-      60*2
+      60
     )
     --mode=make_window
   elseif sp==49 or sp==50 then
     -- it's an npc, make a window
     txt=find_msg(objx,objy)
-    message=add_window(
-      40,
-      40,
+    dialogue=add_window(
+      objx*8+8,
+      objy*8-(#txt*6+6),
       #txt[1]*4+4,
-      #txt*6
+      #txt*6+6,
+      txt
     )
     mode=wait_for_input
   end
@@ -153,7 +150,8 @@ function add_window(x,y,w,h,msg,ttl)
     w=w,
     h=h,
     msg=msg,
-    ttl=ttl
+    ttl=ttl,
+    t=0
   }
   add(windows,window)
   return window
@@ -184,52 +182,45 @@ function rectfill2(x,y,w,h,c)
   rectfill(x,y,x+w,y+h,c)
 end
 
-function show_message()
-  if message!=-1 then
-    local x,y,w,h,msg=message.x,message.y,message.w,message.h,message.msg
-    clip(x-6,y-6,w+6,h+6)
-    rectfill2(x-5,y-5,w+5,h+5,7)
-    rectfill2(x-4,y-4,w+2,h+2,0)
-    for j=1,#msg+1 do
-      for i=-1,1 do
-	for k=-1,1 do
-	  print(msg[j],x+i,y+k+j*4-4,7)
-	end
-      end
-      print(msg[j],x,y+j*4-4,0)
-    end
-    if message.ttl then
-      message.ttl-=1
-    end
-    if message.ttl and message.ttl<=3 then
-      message.w=message.w/2
-      message.x+=message.w/2
-      if flr(message.w)<=0 then
-	message=-1
-	del(windows,message)
-      end
-    end
-    clip()
-  end
-end
-
 function draw_window(window)
-  local x,y,w,h,msg=window.x,window.y,window.w,window.h,window.msg
+  local x,y,w,h,msg,ttl=window.x,window.y,window.w,window.h,window.msg,window.ttl
+  if min(window.t,1)<1 then
+    -- fancy open textbox animation
+    x=max(((window.x+window.w)/2)-(window.t*10),window.x)
+    w=min((window.x)+(window.t*10),window.w)
+    window.t+=0.3
+  end
   clip(x-6,y-6,w+6,h+6)
   rectfill2(x-5,y-5,w+5,h+5,7)
-  rectfill2(x-4,y-4,w+2,h+2,7)
-  for i=-1,1 do
-    for k=-1,1 do
-      print(msg,x+i,y+k,7)
+  rectfill2(x-4,y-4,w+2,h+2,0)
+  for m in all(msg) do
+    for i=-1,1 do
+      for k=-1,1 do
+        print(m,x+i,y+k,7)
+      end
+    end
+    print(m,x,y,0)
+    y+=8
+
+  end
+  if ttl then
+    window.ttl-=1
+    if ttl<=3 then
+      window.w=w/2
+      window.x+=w/4
+      if flr(w)<=0 then
+	message=-1
+	del(windows,window)
+      end
     end
   end
-  print(msg,x,y,0)
+  clip()
 end
 
 function wait_for_input()
   pressbuff=get_press()
   if pressbuff==4 then
-    message.ttl=0
+    dialogue.ttl=0
     mode=check_inputs
   end
 end
