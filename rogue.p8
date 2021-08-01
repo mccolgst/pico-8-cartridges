@@ -138,6 +138,7 @@ function interact_obj(objx,objy)
       txt,
       60
     )
+  end
   if sp == 33 then return end
   mset(objx,objy,dest-1)
 end
